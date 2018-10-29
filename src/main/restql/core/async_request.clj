@@ -56,6 +56,7 @@
           :parse-error true
           :body parsed)))))
 
+<<<<<<< HEAD
 (defn get-error-status [exception]
   (cond 
     (instance? org.apache.http.ConnectionClosedException exception) 408
@@ -65,6 +66,8 @@
 (defn get-error-message [exception]
   (.getMessage exception))
 
+=======
+>>>>>>> fix(request) change request to use clj-http and remove retry on error
 (defn request-respond-callback [result & {:keys [request
                                                  request-timeout
                                                  time-before
@@ -132,17 +135,17 @@
          forward (some-> query-opts :forward-params)
          forward-params (if (nil? forward) {} forward)
          http-method     (:http-method request)
-         request-map {:url             (:url request)
-                      :method          (:http-method request)
-                      :content-type    "application/json"
-                      :resource        (:resource request)
-                      :socket-timeout  request-timeout
-                      :conn-timeout    request-timeout
-                      :query-params    (into (:query-params request) forward-params)
-                      :headers         (:headers request)
-                      :time            time-before
-                      :body            (:post-body request)
-                      :async?          true
+         request-map {:url              (:url request)
+                      :method           (:http-method request)
+                      :content-type     "application/json"
+                      :resource         (:resource request)
+                      :socket-timeout   request-timeout
+                      :conn-timeout     request-timeout
+                      :query-params     (into (:query-params request) forward-params)
+                      :headers          (:headers request)
+                      :time             time-before
+                      :body             (:post-body request)
+                      :async?           true
                       :throw-exceptions false}
          post-body (some-> request :post-body)]
      (debug request-map "Preparing request")
