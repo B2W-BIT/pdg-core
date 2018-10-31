@@ -20,7 +20,7 @@
   :profiles {:test {:dependencies [[se.haleby/stub-http "0.2.3"]]}
              :uberjar { :aot :all }}
   :plugins [[lein-cloverage "1.0.7-SNAPSHOT"]]
-  :source-paths ["src" "src/main"]
-  :resource-paths ["src/resources"]
-  :test-paths ["test" "test/unit" "test/integration"]
+   :source-paths ["src/main"]
+   :resource-paths ["src/resources"]
+   :test-paths ["test/integration" "test/unit"]
 )
