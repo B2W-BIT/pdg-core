@@ -2,6 +2,8 @@
   (:use [slingshot.slingshot :only [throw+]])
   (:require [clojure.core.async :as a :refer [chan go go-loop >! <!]]
             [clj-http.client :as http]
+            [clj-http.conn-mgr :as http-conn]
+            [clj-http.core :as http-core]
             [restql.core.async-request-builder :as builder]
             [restql.core.query :as query]
             [restql.core.hooks.core :as hook]
@@ -11,6 +13,10 @@
             [cheshire.core :as json]
             [clojure.walk :refer [stringify-keys keywordize-keys]])
     (:import [java.net URLDecoder URI]))
+
+(def http-client
+    (->> (http-conn/make-reuseable-async-conn-manager {:default-per-route 200})
+         (http-core/build-async-http-client {})))
 
 (defn get-service-endpoint [mappings entity]
   (if (nil? (mappings entity))
@@ -132,18 +138,19 @@
          forward (some-> query-opts :forward-params)
          forward-params (if (nil? forward) {} forward)
          http-method     (:http-method request)
-         request-map {:url             (:url request)
-                      :method          (:http-method request)
-                      :content-type    "application/json"
-                      :resource        (:resource request)
-                      :socket-timeout  request-timeout
-                      :conn-timeout    request-timeout
-                      :query-params    (into (:query-params request) forward-params)
-                      :headers         (:headers request)
-                      :time            time-before
-                      :body            (:post-body request)
-                      :async?          true
-                      :throw-exceptions false}
+         request-map {:url              (:url request)
+                      :method           (:http-method request)
+                      :content-type     "application/json"
+                      :resource         (:resource request)
+                      :socket-timeout   request-timeout
+                      :conn-timeout     request-timeout
+                      :query-params     (into (:query-params request) forward-params)
+                      :headers          (:headers request)
+                      :time             time-before
+                      :body             (:post-body request)
+                      :async?           true
+                      :throw-exceptions false
+                      :http-client      http-client}
          post-body (some-> request :post-body)]
      (debug request-map "Preparing request")
      ; Before Request hook
