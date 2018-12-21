@@ -1,6 +1,5 @@
 (ns restql.core.statement
   (:require [restql.core.util.deep-merge :refer [deep-merge]]
-            [restql.core.util.deep-contains? :refer [deep-contains?]]
             [restql.core.util.update-in-seq :refer [update-in-seq]]
             [restql.core.encoders.core :as encoder])
 )
@@ -83,36 +82,6 @@
   )
 )
 
-(defn get-field-from-statement [statement]
-  (->> statement
-    (:with)
-    (keys)
-    (first)
-  )
-)
-
-(defn get-resource-name-from-statement [statement]
-  (-> (:with statement)
-      (get (get-field-from-statement statement))
-      (second)
-  )
-)
-
-(defn get-value-from-resource-id [state resource-id]
-  (->>  state
-        (:done)
-        (map #(apply assoc {} %))
-        (map :done-resource)
-        (map :body)
-        (map resource-id)
-        (first)))
-
-; (defn- do-resolve [statement state]
-;   (-> statement
-;       (assoc-in [:with (get-field-from-statement statement)]
-;                 (get-value-from-resource-id state
-;                                             (get-resource-name-from-statement statement)))))
-
 (defn- get-value-from-path [path body]
   (get-in body (into [:body] path))
 )
@@ -179,10 +148,6 @@
       (do-resolve statement state)
       statement
   )
-)
-
-(defn- param-with-encoder? [[_ param-value]]
-  (not (nil? (-> param-value meta :encoder)))
 )
 
 (defn- encode-param-value [encoders [param-key param-value]]

@@ -19,37 +19,6 @@
   }}
 )
 
-(defn get-sample-result-with-two []
-  {
-    :jedis {
-      :details {
-        :headers {
-          :x-type "Jedi"
-          :x-weapon "Light Saber"
-          :cache-control "max-age=500, s-maxage=1200"
-        }
-      }
-      :result {
-        :id 1
-        :name "Luke Skywalker"
-        :weaponId 2
-      }
-    }
-    :planets {
-      :details {
-        :headers {
-          :x-type "Planets"
-          :x-weapon "Kamino"
-        }
-      }
-      :result {
-        :id 1
-        :name "Kamino"
-      }
-    }
-  }
-)
-
 (defn get-sample-minimal-result []
   {:jedis {
     :details {}

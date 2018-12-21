@@ -1,6 +1,8 @@
 (ns restql.core.async-request
   (:use [slingshot.slingshot :only [throw+]])
-  (:require [clojure.core.async :as a :refer [chan go go-loop >! <!]]
+  (:require [clojure.core.async :refer [chan go go-loop >! <!]]
+            [aleph.http :as http]
+            [manifold.deferred :as d]
             [restql.core.query :as query]
             [restql.core.request :as request]
             [restql.core.statement :as statement]
@@ -14,7 +16,7 @@
             [cheshire.core :as json]
             [environ.core :refer [env]]
             [clojure.walk :refer [stringify-keys keywordize-keys]])
-    (:import [java.net URLDecoder URI]))
+    (:import [java.net URLDecoder]))
 
 (def default-values {:pool-connections-per-host 100
                      :pool-total-connections 10000
@@ -28,11 +30,6 @@
                          :total-connections    (get-default :pool-total-connections)
                          :max-queue-size       (get-default :pool-max-queue-size)
                          :stats-callback       #(hook/execute-hook :stats-conn-pool (assoc {} :stats %))}))
-
-(defn get-service-endpoint [mappings entity]
-  (if (nil? (mappings entity))
-    (throw+ (str "Resource endpoint not found" entity))
-    (mappings entity)))
 
 (defn fmap [f m]
   (reduce-kv #(assoc %1 %2 (f %3)) {} m))
@@ -100,12 +97,7 @@
                                 :response-time response-time})
 )
 
-(defn response-to-params [response]
-  (reduce-kv (fn [result k v]
-                (if (= k :body)
-                  (assoc result k (json/generate-string v))
-                  (assoc result k v)))
-              {} response))
+
 
 (defn request-respond-callback [result & {:keys [request
                                                  request-timeout

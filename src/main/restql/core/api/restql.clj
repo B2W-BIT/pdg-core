@@ -9,9 +9,7 @@
             [restql.core.context :as context]
             [restql.parser.core :as parser]
             [clojure.walk :refer [stringify-keys]]
-            [cheshire.core :as json]
             [clojure.core.async :refer [go go-loop <!! <! >! alt! alts! timeout]]
-            [clojure.tools.reader :as edn]
             [environ.core :refer [env]]))
 
 (def default-values {:query-resource-timeout 5000
@@ -75,7 +73,7 @@
     [return-ch exception-ch]))
 
 (defn execute-parsed-query [& {:keys [mappings encoders query query-opts]}]
-  (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+  (let [[result-ch _exception-ch] (execute-query-channel :mappings mappings
                                                         :encoders encoders
                                                         :query query
                                                         :query-opts query-opts)
@@ -84,7 +82,7 @@
 
 (defn execute-parsed-query-async [& {:keys [mappings encoders query query-opts callback]}]
   (go
-    (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+    (let [[result-ch _exception-ch] (execute-query-channel :mappings mappings
                                                           :encoders encoders
                                                           :query query
                                                           :query-opts query-opts)

@@ -15,8 +15,8 @@
   [result & {:keys [pretty]}]
 
   (if pretty
-      (pretty-print result)
-      result))
+    (pretty-print result)
+    result))
 
 (defn handle-error
   "Handles any parsing errors"
@@ -37,8 +37,7 @@
         (edn/read-string))))
 
 (def parse-query-text (cache/cached (fn [query-text]
-  (query-parser query-text)
-)))
+                                      (query-parser query-text))))
 
 (defn parse-query
   "Parses the restQL query"
@@ -58,6 +57,4 @@
   (try
     (parse-query "from cart only lines.id -> match(\"abc\"), lines.sku" :context {})
     (catch Exception e
-      e))
-
-  )
+      e)))

@@ -5,7 +5,6 @@
 ;;let's define some testing urls first.
 (def with-id      "http://cart/:id")
 (def with-two-ids "http://customer/:customer-id/address/:address-id")
-(def with-composed-ids "http://customer/:customer-id/credit-card/:credit-card-id")
 
 ;;Now, to begin with, we must be able to extract the parameters name
 ;;out of a url pattern string.

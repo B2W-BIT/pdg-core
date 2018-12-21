@@ -1,6 +1,5 @@
 (ns restql.core.response.headers
-  (:require [clojure.string :as string]
-            [clojure.walk :refer [keywordize-keys]]
+  (:require [clojure.walk :refer [keywordize-keys]]
             [clojure.set :refer [rename-keys]]
             [restql.core.response.headers.external :as external-headers]
             [restql.core.response.headers.cache-control :as cache-control-headers]))

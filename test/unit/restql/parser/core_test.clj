@@ -1,7 +1,6 @@
 (ns restql.parser.core-test
   (:require [clojure.test :refer :all]
-            [restql.parser.core :refer :all]
-            [clojure.tools.reader :as edn]))
+            [restql.parser.core :refer :all]))
 
 (deftest testing-edn-string-production
 

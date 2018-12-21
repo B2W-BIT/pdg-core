@@ -1,5 +1,5 @@
 (ns restql.core.async-runner
-  (:require [clojure.core.async :as a :refer [go-loop go <! >! chan alt! timeout]]
+  (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout]]
             [restql.core.query :as query]
             [clojure.tools.logging :as log]
             [clojure.set :as s]))
@@ -72,7 +72,7 @@
 (defn make-requests
   "goroutine that keeps listening from request-ch and performs http requests
    sending their result to result-ch"
-  [do-request encoders {:keys [request-ch result-ch exception-ch]} {:keys [debugging] :as query-opts}]
+  [do-request encoders {:keys [request-ch result-ch exception-ch]} {:keys [_debugging] :as query-opts}]
   (go-loop [next-req (<! request-ch)
             timeout-ch (timeout (:global-timeout query-opts))
             uid  (generate-uuid!) ]
@@ -106,7 +106,7 @@
       (go (>! output-ch new-state))
       (recur new-state))))
 
-(defn run [do-request query encoders {:keys [debugging] :as query-opts}]
+(defn run [do-request query encoders {:keys [_debugging] :as query-opts}]
   (let [chans {:output-ch    (chan)
                :request-ch   (chan)
                :result-ch    (chan)

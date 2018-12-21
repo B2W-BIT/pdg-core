@@ -34,12 +34,9 @@
 (defn get-dependencies
   "given a query-item, checks its :with parameter and returns a set
    of keywords with all dependencies"
-  [[query-item-name query-item-data]]
+  [[_query-item-name query-item-data]]
   (let [deps (get-dependency-paths query-item-data)]
     (->> deps (map first) (into #{}))))
-
-(defn get-dependencies-from-data [query-item-data]
-  (get-dependencies [:_ query-item-data]))
 
 (defn find-query-item
   "given a query-item-name (a keyword) returns the query-item (a pair with keyword and data)

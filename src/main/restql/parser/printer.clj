@@ -1,6 +1,5 @@
 (ns restql.parser.printer
-  (:require [clojure.pprint :refer [pprint]]
-            [clojure.tools.reader :as edn]))
+  (:require [clojure.pprint :refer [pprint]]))
 
 (defn pprint-meta [obj]
   (binding [*print-meta* false]

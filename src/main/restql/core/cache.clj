@@ -1,7 +1,5 @@
 (ns restql.core.cache
-    (:require [clojure.tools.logging :as log]
-              [slingshot.slingshot :refer [throw+]]
-              [clojure.core.cache :as cache]
+    (:require [slingshot.slingshot :refer [throw+]]
               [clojure.core.memoize :as memo]))
 
 (def CACHED_COUNT 2000)
@@ -13,8 +11,3 @@
 
     (memo/fifo function {} :fifo/threshold CACHED_COUNT))
 
-(defn clear-cache
-    "Clears the cache"
-    [cached-fn]
-
-    (memo/memo-clear! cached-fn))
