@@ -65,7 +65,7 @@
 
 (defn log-status [uid resource result]
   "in case of result being a list, for multiplexed calls"
-  (if (sequential? result) 
+  (if (sequential? result)
     (map #(get-status-log uid resource %) result)
     (get-status-log uid resource result)))
 

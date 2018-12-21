@@ -105,8 +105,10 @@
            [:hero {:from :heroes :with {:id ^{:encoder :json} [:player :id]} :method :get}])))
 
   (testing "Testing query params one chained parameter and metadata"
-    (is (= (pr-str (parse-query "from heroes as hero params id = player.id -> encoder(\"json\", \"pretty\")"))
-           (pr-str [:hero {:from :heroes :with {:id ^{:encoder :json :args ["pretty"]} [:player :id]} :method :get}]))))
+    (is (= (binding [*print-meta* true]
+                    (pr-str (parse-query "from heroes as hero params id = player.id -> base64")))
+           (binding [*print-meta* true]
+                    (pr-str [:hero {:from :heroes :with {:id ^{:encoder :base64} [:player :id]} :method :get}])))))
 
   (testing "Testing query params headers"
     (is (= (parse-query "from heroes as hero headers Content-Type = \"application/json\" params id = 123")
@@ -152,7 +154,7 @@
                                                  with
                                                      limit = product.id -> flatten -> json
                                                      fields = [\"rating\", \"tags\", \"images\", \"groups\"]
-                                                 only 
+                                                 only
                                                      id, name, cep, phone"))
              (pr-str [:products {:from         :product
                                  :with-headers {"content-type" "application/json"}

@@ -1,6 +1,6 @@
-(ns restql.core.url-matcher-test
+(ns restql.core.url-test
   (:require [clojure.test :refer [deftest is]])
-  (:use restql.core.url-matcher))
+  (:use restql.core.url))
 
 ;;let's define some testing urls first.
 (def with-id      "http://cart/:id")

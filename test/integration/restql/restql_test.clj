@@ -9,8 +9,14 @@
 (defn hero-route []
   {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20"})})
 
+(defn hero-with-bag-route []
+  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :bag {:capacity 10}})})
+
 (defn sidekick-route []
   {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm sidekick"})})
+
+(defn product-route [id]
+  {:status 200 :content-type "application/json" :body (json/generate-string {:product (str id)})})
 
 
 (defn execute-query ([base-url query params]
@@ -68,6 +74,26 @@
   )
 )
 
+(deftest request-with-encoder
+  (with-routes!
+    {{:path "/hero" :query-params { :bag "%7B%22capacity%22%3A10%7D"}} (hero-route)}
+    (let [result (execute-query uri "from hero with bag = {capacity: 10} -> json")]
+      (is (= 200 (get-in result [:hero :details :status])))
+    )
+  )
+)
+
+(deftest request-with-encoder-2
+  (with-routes!
+    {"/hero" (hero-with-bag-route)
+     {:path "/sidekick" :query-params {:bag "%7B%22capacity%22%3A10%7D"}} (sidekick-route)}
+    (let [result (execute-query uri "from hero \n from sidekick with bag = hero.bag -> json")]
+      (is (= 200 (get-in result [:hero :details :status])))
+      (is (= 200 (get-in result [:sidekick :details :status])))
+    )
+  )
+)
+
 (deftest timeout-request-should-return-408
   (with-routes!
     {"/hero" (assoc (hero-route) :delay 500)}
@@ -92,13 +118,23 @@
   )
 )
 
-;(deftest should-throw-exeption-if-chainned-resource-fails
-; (with-routes!
-;{"/hero" (hero-route)
-; "/sidekick" (sidekick-route)}
-;(is (thrown? Exception (execute-query uri "from hero\nfrom sidekick with id = hero.sidekickId")))
-;)
-;)
+(deftest chained-call
+  (with-routes! {"/hero" (hero-route) "/sidekick" (sidekick-route)}
+    (let [result (execute-query uri "from hero\nfrom sidekick")]
+      (is (= 200 (get-in result [:hero :details :status])))
+      (is (= 200 (get-in result [:sidekick :details :status])))
+    )
+  )
+)
+
+(deftest with-params
+  (with-routes! {"/product/1234" (product-route 1234)}
+    (let [result (execute-query uri "from product with id = $id" {:id "1234"})]
+      (println "result" (get-in result [:product]))
+      (is (= 200 (get-in result [:product :details :status])))
+    )
+  )
+)
 
 (deftest shouldnt-throw-exeption-if-chainned-resource-timeout-and-ignore-error
   (with-routes!

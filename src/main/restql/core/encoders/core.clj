@@ -33,5 +33,9 @@
       :else       :default)))
 
 (defn encode [encoders data]
-  (let [encoder-key (get-encoder-key data)]
-    (perfom-encoding (assoc encoders :default default-encoder) encoder-key data)))
+  (-> encoders
+      (merge base-encoders)
+      (assoc :default default-encoder)
+      (perfom-encoding (get-encoder-key data) data)
+  )
+)

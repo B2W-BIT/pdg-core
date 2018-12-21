@@ -7,13 +7,9 @@
   (is (= "10"   (encode base-encoders 10)))
   (is (= "true" (encode base-encoders true)))
   (is (nil? (encode base-encoders nil))))
-  
 
-(deftest test-throws-exception-with-unrecognized-encoding
-  (is (= 
-    :ok 
-    (try+
-      (encode {} {:bla 123})
-      (catch [:type :unrecognized-encoding] e :ok)
-      (catch Object e e)))))
+(deftest test-simple-values-whithout-encoders
+  (is (= "10"   (encode nil 10)))
+  (is (= "true" (encode nil true)))
+  (is (nil? (encode nil nil))))
 

@@ -1,13 +1,15 @@
 (ns restql.core.async-request
   (:use [slingshot.slingshot :only [throw+]])
   (:require [clojure.core.async :as a :refer [chan go go-loop >! <!]]
+            [restql.core.query :as query]
+            [restql.core.request :as request]
+            [restql.core.statement :as statement]
+            [restql.hooks.core :as hook]
+            [restql.core.extractor :refer [traverse]]
+            [restql.core.util.deep-merge :refer [deep-merge]]
             [aleph.http :as http]
             [manifold.deferred :as d]
-            [restql.core.async-request-builder :as builder]
-            [restql.core.query :as query]
-            [restql.hooks.core :as hook]
             [clojure.tools.logging :as log]
-            [restql.core.extractor :refer [traverse]]
             [slingshot.slingshot :refer [try+]]
             [cheshire.core :as json]
             [environ.core :refer [env]]
@@ -111,7 +113,7 @@
                                                  query-opts
                                                  output-ch
                                                  before-hook-ctx]}]
-        (let [log-data {:resource (:resource request)
+        (let [log-data {:resource (:from request)
                         :timeout  request-timeout
                         :success  true}]
           (log/debug (assoc log-data :success true
@@ -120,7 +122,7 @@
                                  "Request successful")
           (let [response (convert-response result {:debugging (:debugging query-opts)
                                                    :metadata  (:metadata request)
-                                                   :resource  (:resource request)
+                                                   :resource  (:from request)
                                                    :url       (:url request)
                                                    :params    (:query-params request)
                                                    :timeout   request-timeout
@@ -149,7 +151,7 @@
                                     :output-ch       output-ch
                                     :before-hook-ctx before-hook-ctx)
           (let [error-status (get-error-status exception)
-                log-data {:resource (:resource request)
+                log-data {:resource (:from request)
                           :timeout  request-timeout
                           :success  false}]
             (log/debug (assoc log-data :success false
@@ -158,7 +160,7 @@
             (let [error-data (assoc log-data :success false
                                              :status error-status
                                              :metadata (some-> request :metadata)
-                                             :method (:http-method request)
+                                             :method (:method request)
                                              :url (some-> request :url)
                                              :params    (:query-params request)
                                              :response-time (- (System/currentTimeMillis) time-before)
@@ -187,9 +189,9 @@
          forward         (some-> query-opts :forward-params)
          forward-params  (if (nil? forward) {} forward)
          request-map     {:url                (:url request)
-                          :request-method     (:http-method request)
+                          :request-method     (:method request)
                           :content-type       "application/json"
-                          :resource           (:resource request)
+                          :resource           (:from request)
                           :connection-timeout request-timeout
                           :request-timeout    request-timeout
                           :read-timeout       request-timeout
@@ -234,16 +236,21 @@
 (defn failure? [requests]
   (or (nil? requests) (vector-with-nils? requests)))
 
-(defn perform-request [url query-item-data state encoders result-ch query-opts]
-  (let [requests (builder/build-requests url query-item-data encoders state)]
-    (cond
-      (failure? requests) (go (>! result-ch {:status nil :body nil}))
-      (sequential? requests) (query-and-join requests result-ch query-opts)
-      :else (make-request requests query-opts result-ch))))
+(defn perform-request [result-ch query-opts requests]
+  (cond (failure? requests) (go (>! result-ch {:status nil :body nil}))
+        (= (count requests) 1) (make-request (first requests) query-opts result-ch)
+        :else (query-and-join requests result-ch query-opts)
+  )
+)
 
-(defn do-request-url [mappings query-item-data state encoders result-ch query-opts]
-  (let [url (get-service-endpoint mappings (:from query-item-data))]
-    (perform-request url query-item-data state encoders result-ch query-opts)))
+(defn do-request-url [mappings statement state encoders result-ch query-opts]
+  (->> (statement/resolve-chained-values statement state)
+       (statement/expand)
+       (statement/apply-encoders encoders)
+       (request/from-statements mappings)
+       (perform-request result-ch query-opts)
+  )
+)
 
 (defn do-request-data [{[entity & path] :from} state result-ch]
   (go (>! result-ch (-> (query/find-query-item entity (:done state))

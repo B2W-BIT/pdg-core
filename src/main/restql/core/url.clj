@@ -1,8 +1,8 @@
-(ns restql.core.url-matcher
+(ns restql.core.url
   (:require [clojure.string :as str]
             [ring.util.codec :refer [url-encode]]))
 
-(defn extract-parameters 
+(defn extract-parameters
   "receives an string containing a url pattern and returns
    a set with all declared parameters"
   [url]
@@ -28,3 +28,11 @@
   (reduce (fn [result param-key]
             (dissoc result param-key))
           params (extract-parameters url)))
+
+(defn from-mappings
+  "gets a resource url from mappings"
+  [mappings statement]
+  (->> (:from statement)
+       (get mappings)
+  )
+)
