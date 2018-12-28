@@ -36,11 +36,20 @@
   (update-in-seq list-params (keys list-params) first)
 )
 
+(defn- should-recur? [list-params]
+  (some vector? (vals (get-first-values list-params)))
+)
+
+; Sad but true
+(declare do-expand)
 (defn- create-expanded-statement [statement list-params]
-  (assoc statement :with
-                   (merge (:with statement)
-                          (get-first-values list-params)
-                   )
+  (let [new-statement (->> (get-first-values list-params)
+                           (merge (:with statement))
+                           (assoc statement :with))]
+       (if (should-recur? list-params)
+           (do-expand new-statement)
+           new-statement
+       )
   )
 )
 
@@ -49,10 +58,8 @@
           list-params (filter-expandable-params statement)]
       (if (should-expand? list-params)
           (recur (conj expanded-statement
-                       (create-expanded-statement statement list-params)
-                 )
-                 (remove-first-values list-params)
-          )
+                       (create-expanded-statement statement list-params))
+                 (remove-first-values list-params))
           expanded-statement
       )
    )
@@ -82,21 +89,41 @@
   )
 )
 
+(defn get-field-from-statement [statement]
+  (->> statement
+    (:with)
+    (keys)
+    (first)
+  )
+)
+
+(defn get-resource-name-from-statement [statement]
+  (-> (:with statement)
+      (get (get-field-from-statement statement))
+      (second)
+  )
+)
+
+(defn get-value-from-resource-id [state resource-id]
+  (->>  state
+        (:done)
+        (map #(apply assoc {} %))
+        (map :done-resource)
+        (map :body)
+        (map resource-id)
+        (first)))
+
 (defn- get-value-from-path [path body]
   (get-in body (into [:body] path))
 )
 
 (defn- get-chain-value-from-done-state [[resource-name & path] state]
   (->> (:done state)
-       (filter (fn [[a _]] (= a resource-name)))
+       (filter (fn [[key _]] (= key resource-name)))
        (map second)
        (flatten)
        (map (partial get-value-from-path path))
        (into [])
-       (#(if (= (count %) 1)
-             (first %)
-             %
-       ))
   )
 )
 

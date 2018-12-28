@@ -7,7 +7,7 @@
 )
 
 (defn hero-route []
-  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20"})})
+  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20" :weapons ["pen" "papel clip"]})})
 
 (defn hero-with-bag-route []
   {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :bag {:capacity 10}})})

@@ -51,6 +51,20 @@
   )
 
   (testing "Expand multiple list value with keeps non list values"
+    (is (= [{:from :resource-name :with {:id 1}}]
+           (statement/expand {:from :resource-name :with {:id [1]}})
+        )
+    )
+  )
+
+  (testing "Expand multiple list value with keeps non list values"
+    (is (= [[{:from :resource-name :with {:id 1}}] [{:from :resource-name :with {:id 2}}]]
+           (statement/expand {:from :resource-name :with {:id [[1] [2]]}})
+        )
+    )
+  )
+
+  (testing "Expand multiple list value with keeps non list values"
     (is (= [{:from :resource-name :with {:id 1 :name "a" :job "clojurist"}} {:from :resource-name :with {:id nil :name "b" :job "clojurist"}}]
            (statement/expand {:from :resource-name :with {:id [1 nil] :name ["a", "b"] :job "clojurist"}})
         )
@@ -68,31 +82,31 @@
   )
 
   (testing "Returns a statement with single done resource value"
-    (is (= {:from :resource-name :with {:id 1}}
+    (is (= {:from :resource-name :with {:id [1]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id [:done-resource :id]}}
                                              {:done [[:done-resource {:body {:id 1}}]]})
         )
     )
 
-    (is (= {:from :resource-name :with {:id 5}}
+    (is (= {:from :resource-name :with {:id [5]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id [:done-resource :id]}}
                                              {:done [[:done-resource {:body {:id 5}}]]})
         )
     )
 
-    (is (= {:from :resource-name :with {:id "clojurist"}}
+    (is (= {:from :resource-name :with {:id ["clojurist"]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id [:done-resource :resource-id]}}
                                              {:done [[:done-resource {:body {:resource-id "clojurist"}}]]})
         )
     )
 
-    (is (= {:from :resource-name :with {:name "clojurist"}}
+    (is (= {:from :resource-name :with {:name ["clojurist"]}}
            (statement/resolve-chained-values {:from :resource-name :with {:name [:done-resource :resource-id]}}
                                              {:done [[:done-resource {:body {:resource-id "clojurist"}}]]})
         )
     )
 
-    (is (= {:from :resource-name :with {:id 1 :name "clojurist"}}
+    (is (= {:from :resource-name :with {:id 1 :name ["clojurist"]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id 1 :name [:done-resource :resource-id]}}
                                              {:done [[:done-resource {:body {:resource-id "clojurist"}}]]})
         )
@@ -109,7 +123,7 @@
   )
 
   (testing "Returns a statement with single list value"
-    (is (= {:from :resource-name :with {:id [1 2] :name ["a" "b"]}}
+    (is (= {:from :resource-name :with {:id [[1 2]] :name ["a" "b"]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id [:done-resource :id] :name ["a" "b"]}}
                                              {:done [[:done-resource {:body {:id [1 2]}}]]})
         )
@@ -157,7 +171,7 @@
 
   (testing "Resolve with encoder on single return value"
     (is (= (binding [*print-meta* true]
-                    (pr-str {:from :resource-name :with {:id 1 :name ["a" "b"]}}))
+                    (pr-str {:from :resource-name :with {:id ^{:encoder :json} [1] :name ["a" "b"]}}))
            (binding [*print-meta* true]
                     (pr-str (statement/resolve-chained-values {:from :resource-name
                                                                :with {:id ^{:encoder :json} [:done-resource :id] :name ["a" "b"]}}
