@@ -36,17 +36,13 @@
   (update-in-seq list-params (keys list-params) first)
 )
 
-(defn- should-recur? [list-params]
-  (some vector? (vals (get-first-values list-params)))
-)
-
 ; Sad but true
 (declare do-expand)
 (defn- create-expanded-statement [statement list-params]
   (let [new-statement (->> (get-first-values list-params)
                            (merge (:with statement))
                            (assoc statement :with))]
-       (if (should-recur? list-params)
+       (if (some vector? (vals (get-first-values list-params)))
            (do-expand new-statement)
            new-statement
        )
@@ -113,9 +109,12 @@
         (map resource-id)
         (first)))
 
-(defn- get-value-from-path [path body]
-  (get-in body (into [:body] path))
-)
+(defn get-value-from-path [path {body :body}]
+  (if (sequential? body) 
+    (->> body  
+        (map #(get-in % path)) 
+        (vec))
+    (get-in body path)))
 
 (defn- get-chain-value-from-done-state [[resource-name & path] state]
   (->> (:done state)
@@ -181,18 +180,15 @@
   (assoc {} param-key (encoder/encode encoders param-value))
 )
 
-(defn- encode-params [encoders statement]
-  (->> statement
-       (:with)
-       (map (partial encode-param-value encoders))
-       (into {})
-       (assoc {} :with)
-       (deep-merge statement)
-  )
-)
+(defn encode-params [encoders statements]
+  (map #(->> %
+    (:with)
+    (map (partial encode-param-value encoders))
+    (into {})
+    (assoc {} :with)
+    (deep-merge  %)) statements))
 
-(defn apply-encoders [encoders statements]
-  (->> statements
-       (map (partial encode-params encoders))
-  )
-)
+(defn apply-encoders [encoders expanded-statements]
+  (if (sequential? (first expanded-statements))
+    (map (partial apply-encoders encoders) expanded-statements)
+    (encode-params encoders expanded-statements)))

@@ -33,12 +33,19 @@
         response))
 
 (defn get-details [query-opts query-response]
+  (if (sequential? query-response)
+    (map #(get-details query-opts %) query-response)
     (-> {}
         (assoc :success (is-success query-response)
                :status (:status query-response)
                :headers (:headers query-response))
         (append-metadata query-response)
-        (append-debug-data query-opts query-response)))
+        (append-debug-data query-opts query-response))))
+
+(defn get-body-response [query-response]
+  (if (sequential? query-response)
+    (map get-body-response query-response)
+    (:body query-response)))
 
 (defn prepare-response [query-opts query-response]
     ; Sequential means it's a multiplexed call.
@@ -47,11 +54,8 @@
                   (get-details query-opts query-response)
               )
      :result  (if (sequential? query-response)
-                  (map :body query-response)
-                  (:body query-response)
-              )
-    }
-)
+              (map get-body-response query-response)
+              (:body query-response))})
 
 (defn build [query-responses query-opts]
     (reduce-kv (fn [response resource query-response]

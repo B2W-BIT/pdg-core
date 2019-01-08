@@ -7,7 +7,7 @@
 )
 
 (defn hero-route []
-  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20" :weapons ["pen" "papel clip"]})})
+  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]})})
 
 (defn hero-with-bag-route []
   {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :bag {:capacity 10}})})
@@ -18,10 +18,19 @@
 (defn product-route [id]
   {:status 200 :content-type "application/json" :body (json/generate-string {:product (str id)})})
 
+(defn heroes-route []
+  {:status 200
+   :content-type "application/json"
+   :body (json/generate-string [{:hi "I'm hero" :villains ["1" "2"]} {:hi "I'm hero" :villains ["3" "4"]}])})
+
+(defn villain-route [id]
+  {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm villain" :id (str id)})})
 
 (defn execute-query ([base-url query params]
     (restql/execute-query :mappings {:hero                (str base-url "/hero")
+                                     :heroes              (str base-url "/heroes")
                                      :sidekick            (str base-url "/sidekick")
+                                     :villain             (str base-url "/villain/:id")
                                      :product             (str base-url "/product/:id")
                                      :product-price       (str base-url "/price/:productId")
                                      :product-description (str base-url "/description/:productId")}
@@ -56,6 +65,31 @@
       (is (= "I'm hero" (:hi (second result))))
     )
   )
+
+  (with-routes!
+    {"/hero"     (hero-route)
+     "/villain/1" (villain-route "1")
+     "/villain/2" (villain-route "2")}
+    (let [result (execute-query uri "from hero with id =[1,2]\nfrom villain with id = hero.villains")]
+      (is (= 200 (:status (first (get-in result [:hero :details])))))
+      (is (= 200 (:status (second (get-in result [:hero :details])))))
+      (is (= 200 (:status (first  (first (get-in result [:villain :details]))))))
+      (is (= 200 (:status (second (first (get-in result [:villain :details]))))))
+      (is (= 200 (:status (first  (second (get-in result [:villain :details]))))))
+      (is (= 200 (:status (second (second  (get-in result [:villain :details]))))))))
+
+  (with-routes!
+    {"/heroes"     (heroes-route)
+     "/villain/1" (villain-route "1")
+     "/villain/2" (villain-route "2")
+     "/villain/3" (villain-route "3")
+     "/villain/4" (villain-route "4")}
+    (let [result (execute-query uri "from heroes\nfrom villain with id = heroes.villains")]
+      (is (= 200 (get-in result [:heroes :details :status])))
+      (is (= 200 (:status (first  (first  (first (get-in result [:villain :details])))))))
+      (is (= 200 (:status (second (first  (first (get-in result [:villain :details])))))))
+      (is (= 200 (:status (first  (second (first (get-in result [:villain :details])))))))
+      (is (= 200 (:status (second (second (first (get-in result [:villain :details])))))))))
 )
 
 ;(deftest error-request-should-throw-exception
@@ -130,7 +164,6 @@
 (deftest with-params
   (with-routes! {"/product/1234" (product-route 1234)}
     (let [result (execute-query uri "from product with id = $id" {:id "1234"})]
-      (println "result" (get-in result [:product]))
       (is (= 200 (get-in result [:product :details :status])))
     )
   )

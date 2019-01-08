@@ -139,6 +139,17 @@
     )
   )
 
+  (testing "Returns a statement with multiple list value"
+    (is (=  {:from :sidekick :with {:id [[ [1 2] [3 4] ]] } :method :get}
+            (statement/resolve-chained-values {:from :sidekick :with {:id [:heroes :sidekickId]} :method :get}
+                                              {:done [[:heroes {:resource :heroes :body [{:id "A" :sidekickId [1 2]}
+                                                                                           {:id "B" :sidekickId [3 4]}]}]]
+                                               :requested []
+                                               :to-do [[:sidekick {:from :sidekick :with {:id [:heroes :sidekickId]} :method :get}]]})
+            )
+        )
+    )
+
   (testing "Returns a statement with single list value"
     (is (= {:from :resource-name :with {:id [1 nil] :name ["a" "b"]}}
            (statement/resolve-chained-values {:from :resource-name :with {:id [:done-resource :id] :name ["a" "b"]}}

@@ -15,6 +15,20 @@
     )
   )
 
+  (testing "Returns a request config from a statement with a list of statement"
+    (is
+     (= [[{:from   :resource-name
+           :url    "http://resource-url"
+           :method :get
+           :query-params {:id 1}}
+          {:from   :resource-name
+           :url    "http://resource-url"
+           :method :get
+           :query-params {:id 2}}]]
+        (request/from-statements {:resource-name "http://resource-url"}
+                                 [[{:from :resource-name, :with {:id 1}, :method :get}
+                                   {:from :resource-name, :with {:id 2}, :method :get}]]))))
+
   (testing "With method"
     (is
       (= [{:from    :resource-name

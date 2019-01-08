@@ -213,13 +213,16 @@
                                                      :before-hook-ctx before-hook-ctx))
          (d/success! 1)))))
 
-(defn query-and-join [requests output-ch query-opts]
-  (go-loop [[ch & others] (map #(make-request % query-opts) requests)
-            result []]
-    (if ch
-      (recur others (conj result (<! ch)))
-      (do
-        (>! output-ch result)))))
+(defn query-and-join [requests query-opts]
+  (let [perform-func (fn [func requests query-opts] 
+                        (go-loop [[ch & others] (map #(func % query-opts) requests)  
+                                  result []]
+                          (if ch
+                            (recur others (conj result (<! ch)))
+                            result)))]
+    (cond 
+      (sequential? (first requests))(perform-func query-and-join requests query-opts)  
+      :else (perform-func make-request requests query-opts))))
 
 (defn vector-with-nils? [v]
   (and (seq? v)
@@ -229,11 +232,15 @@
   (or (nil? requests) (vector-with-nils? requests)))
 
 (defn perform-request [result-ch query-opts requests]
-  (cond (failure? requests) (go (>! result-ch {:status nil :body nil}))
-        (= (count requests) 1) (make-request (first requests) query-opts result-ch)
-        :else (query-and-join requests result-ch query-opts)
-  )
-)
+  (cond 
+    (failure? requests) 
+      (go (>! result-ch {:status nil :body nil}))
+    (and (not (sequential? (first requests))) (= (count requests) 1)) 
+      (make-request (first requests) query-opts result-ch)
+    :else (go (->> 
+                (query-and-join requests query-opts)
+                (<! )
+                (>! result-ch)))))
 
 (defn do-request-url [mappings statement state encoders result-ch query-opts]
   (->> (statement/resolve-chained-values statement state)
