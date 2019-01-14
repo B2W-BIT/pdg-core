@@ -3,8 +3,8 @@
             [restql.core.api.restql :as restql]
             [cheshire.core :as json]
             [stub-http.core :refer :all]
-  )
-  (:use [clojure.pprint])
+            [clojure.pprint :refer :all]
+            )
 )
 
 (def hero-response {:id "B20" :name "Batman" :sidekick "A20" :sidekicks [{ :id "A20" :name "Robin" } { :id "A30" :name "Alfred" } ] })
@@ -38,7 +38,7 @@
   (with-routes! {"/hero" (hero-route)}
       (let [response (execute-query uri "from hero with id = [1,2] only name")
               result (get-in response [:hero :result])]
-          (is (= nil (:id (first result)) ))
+          (is (= nil (:id (first result))))
           (is (= nil (:id (second result))))
       )
   )

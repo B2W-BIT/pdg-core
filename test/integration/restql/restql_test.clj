@@ -2,10 +2,14 @@
   (:require [clojure.test :refer [deftest is]]
             [restql.parser.core :as parser]
             [restql.core.api.restql :as restql]
+            [byte-streams :as bs]
             [cheshire.core :as json]
             [stub-http.core :refer :all]
             )
 )
+
+(defn get-stub-body [request]
+  (val (first (:body request))))
 
 (defn hero-route []
   {:status 200 :content-type "application/json" :body (json/generate-string {:hi "I'm hero" :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]})})
@@ -133,6 +137,15 @@
   (with-routes!
     {"/hero" (hero-route)}
     (let [result (execute-query uri "from hero with name = $name" {:name "Dwayne \"The Rock\" Johnson"})]
+      (is (= 200 (get-in result [:hero :details :status]))))))
+
+(deftest execute-query-post
+  (with-routes!
+    {(fn [request]
+       (and (= (:path request) "/hero")
+            (= (:method request) "POST")
+            (= (get-stub-body request) (json/generate-string {:id 1})))) (hero-route)}
+    (let [result (execute-query uri "to hero body id = 1")]
       (is (= 200 (get-in result [:hero :details :status]))))))
 
 (deftest request-with-param-map

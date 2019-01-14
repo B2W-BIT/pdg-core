@@ -190,7 +190,7 @@
                           :query-params       (into (:query-params request) forward-params)
                           :headers            (:with-headers request)
                           :time               time-before
-                          :body               (some-> request :post-body)
+                          :body               (some-> request :with-body json/encode)
                           :pool               client-connection-pool
                           :pool-timeout       request-timeout}
          ; Before Request hook
@@ -214,14 +214,14 @@
          (d/success! 1)))))
 
 (defn query-and-join [requests query-opts]
-  (let [perform-func (fn [func requests query-opts] 
-                        (go-loop [[ch & others] (map #(func % query-opts) requests)  
+  (let [perform-func (fn [func requests query-opts]
+                        (go-loop [[ch & others] (map #(func % query-opts) requests)
                                   result []]
                           (if ch
                             (recur others (conj result (<! ch)))
                             result)))]
-    (cond 
-      (sequential? (first requests))(perform-func query-and-join requests query-opts)  
+    (cond
+      (sequential? (first requests))(perform-func query-and-join requests query-opts)
       :else (perform-func make-request requests query-opts))))
 
 (defn vector-with-nils? [v]
@@ -232,12 +232,12 @@
   (or (nil? requests) (vector-with-nils? requests)))
 
 (defn perform-request [result-ch query-opts requests]
-  (cond 
-    (failure? requests) 
+  (cond
+    (failure? requests)
       (go (>! result-ch {:status nil :body nil}))
-    (and (not (sequential? (first requests))) (= (count requests) 1)) 
+    (and (not (sequential? (first requests))) (= (count requests) 1))
       (make-request (first requests) query-opts result-ch)
-    :else (go (->> 
+    :else (go (->>
                 (query-and-join requests query-opts)
                 (<! )
                 (>! result-ch)))))
