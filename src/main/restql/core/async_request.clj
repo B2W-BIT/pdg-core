@@ -231,11 +231,17 @@
 (defn failure? [requests]
   (or (nil? requests) (vector-with-nils? requests)))
 
+(defn- single-request-not-multiplexed? [requests]
+  (and  
+    (= 1 (count requests))
+    (not (sequential? (first requests)))
+    (not (:multiplexed (first requests)))))
+
 (defn perform-request [result-ch query-opts requests]
   (cond
     (failure? requests)
       (go (>! result-ch {:status nil :body nil}))
-    (and (not (sequential? (first requests))) (= (count requests) 1))
+    (single-request-not-multiplexed? requests)
       (make-request (first requests) query-opts result-ch)
     :else (go (->>
                 (query-and-join requests query-opts)
@@ -248,8 +254,8 @@
        (statement/apply-encoders encoders)
        (request/from-statements mappings)
        (perform-request result-ch query-opts)
+       )
   )
-)
 
 (defn do-request-data [{[entity & path] :from} state result-ch]
   (go (>! result-ch (-> (query/find-query-item entity (:done state))

@@ -41,7 +41,7 @@
 (defn- create-expanded-statement [statement list-params]
   (let [new-statement (->> (get-first-values list-params)
                            (merge (:with statement))
-                           (assoc statement :with))]
+                           (assoc statement :multiplexed true :with))]
        (if (some vector? (vals (get-first-values list-params)))
            (do-expand new-statement)
            new-statement
@@ -117,14 +117,17 @@
     (get-in body path)))
 
 (defn- get-chain-value-from-done-state [[resource-name & path] state]
-  (->> (:done state)
-       (filter (fn [[key _]] (= key resource-name)))
-       (map second)
-       (flatten)
-       (map (partial get-value-from-path path))
-       (into [])
-  )
-)
+  (let [resource (->> state 
+                      :done 
+                      (filter (fn [[key _]] (= key resource-name))) 
+                      first 
+                      second)]
+    (if (sequential? resource)
+      (->> resource
+           (flatten)
+           (map (partial get-value-from-path path))
+           (vec))
+      (->> resource (get-value-from-path path)))))
 
 (defn meta-available? [object]
   (instance? clojure.lang.IMeta object)
