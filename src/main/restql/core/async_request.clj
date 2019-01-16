@@ -190,7 +190,7 @@
                           :query-params       (into (:query-params request) forward-params)
                           :headers            (:with-headers request)
                           :time               time-before
-                          :body               (some-> request :with-body json/encode)
+                          :body               (some-> request :body json/encode)
                           :pool               client-connection-pool
                           :pool-timeout       request-timeout}
          ; Before Request hook

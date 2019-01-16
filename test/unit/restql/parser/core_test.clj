@@ -24,30 +24,6 @@
            (is (= (parse-query "delete heroes")
                   [:heroes {:from :heroes :method :delete}])))
 
-  (testing "Testing simple query with-body json"
-    (is (= (parse-query "from heroes
-                                        body
-                                          foo = \"bar\"")
-           [:heroes {:from :heroes :with-body {:foo "bar"} :method :get}])))
-
-  (testing "Testing simple query with-body complex json"
-    (is (= (parse-query "from heroes
-                                        body
-                                          foo = \"bar\",
-                                          bar = {
-                                            baz: \"baz\"
-                                          }")
-           [:heroes {:from :heroes :with-body {:foo "bar" :bar {:baz "baz"}} :method :get}])))
-
-  (testing "Testing simple query with-body complex json and chaining"
-    (is (= (parse-query "from heroes
-                                        body
-                                          id = api.id,
-                                          bar = {
-                                            baz: \"baz\"
-                                          }")
-           [:heroes {:from :heroes :with-body {:id [:api :id] :bar {:baz "baz"}} :method :get}])))
-
   (testing "Testing simple query params a use clause"
     (is (= (parse-query "use cache-control = 900
                                       from heroes as hero")

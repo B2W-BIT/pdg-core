@@ -15,14 +15,26 @@
   )
 )
 
+(defn- is-post-or-put? [statement]
+  (or (= :post (:method statement)) (= :put (:method statement))))
+
 (defn- add-query-params [mappings statement request]
   (-> statement
       (get :with)
-      (as-> params (url/dissoc-params (url/from-mappings mappings statement) params))
+      (as-> params (if (is-post-or-put? statement)
+                       (url/filter-explicit-query-params (url/from-mappings mappings statement) params)
+                       (url/dissoc-path-params (url/from-mappings mappings statement) params)))
       (as-> params (if-not (empty? params) (assoc? {} :query-params params) {}))
-      (conj request)
-  )
-)
+      (conj request)))
+
+(defn- add-body-params [mappings statement request]
+  (-> statement
+      (get :with)
+      (as-> params (if (is-post-or-put? statement)
+                       (url/dissoc-params (url/from-mappings mappings statement) params)
+                       (identity {})))
+      (as-> params (if-not (empty? params) (assoc? {} :body params) {}))
+      (conj request)))
 
 (def params-ignored-from-request [:with])
 
@@ -31,8 +43,7 @@
        (add-default-method)
        (add-url mappings statement)
        (add-query-params mappings statement)
-  )
-)
+       (add-body-params mappings statement)))
 
 (defn from-statements [mappings statements]
   (if (sequential? (first statements))
