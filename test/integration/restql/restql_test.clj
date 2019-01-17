@@ -1,5 +1,5 @@
 (ns restql.restql-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [restql.parser.core :as parser]
             [restql.core.api.restql :as restql]
             [byte-streams :as bs]
@@ -60,7 +60,7 @@
     (let [result (execute-query uri "from hero\n from villain with id = hero.villains")]
       (is (= {:villains ["1" "2"]} (get-in result [:hero :result])))
       (is (= [{:hi "I'm villain", :id "1"} {:hi "I'm villain", :id "2"}] (get-in result [:villain :result])))))
-
+  
   ; Test simple case with: single, list with one, list with two
   (with-routes!
     {"/hero" (hero-route)}
@@ -69,7 +69,7 @@
           result (get-in response [:hero :result])]
       (is (= 200 (:status details)))
       (is (= {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]} result))))
-
+  
   (with-routes!
     {"/hero" (hero-route)}
     (let [response (execute-query uri "from hero with name = $name" {:name ["Doom"]})
@@ -77,7 +77,7 @@
           result (get-in response [:hero :result])]
       (is (= 200 (:status (first details))))
       (is (= [{:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]}] result))))
-
+  
   (with-routes!
     {"/hero" (hero-route)}
     (let [response (execute-query uri "from hero with name = $name" {:name ["Doom" "Duke Nuken"]})
@@ -87,7 +87,7 @@
       (is (= 200 (:status (second details))))
       (is (= [{:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]}
               {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]}] result))))
-
+  
   ;; Test simple case with list: single, list with one, list with two
   (with-routes!
     {"/hero"     {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["1" "2"]})}
@@ -153,7 +153,7 @@
       (is (= {:villains "1"} (get-in result [:hero :result])))
       (is (= {:weapons ["dagger" "sword"]} (get-in result [:villain :result])))
       (is (= [{:name "dagger"} {:name "sword"}] (get-in result [:weapon :result])))))
-
+  
   (with-routes!
     {"/hero"     {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["1"]})}
      "/villain/1" {:status 200 :content-type "application/json" :body (json/generate-string {:weapons ["dagger" "sword"]})}
@@ -164,7 +164,40 @@
                                      from weapon with id = villain.weapons")]
       (is (= {:villains ["1"]} (get-in result [:hero :result])))
       (is (= [{:weapons ["dagger" "sword"]}] (get-in result [:villain :result])))
-      (is (= [[{:name "dagger"} {:name "sword"}]] (get-in result [:weapon :result]))))))
+      (is (= [[{:name "dagger"} {:name "sword"}]] (get-in result [:weapon :result])))))
+ 
+  (testing "With map->list->simple_value" 
+    (with-routes!
+      {"/hero"          {:status 200 :content-type "application/json" :body (json/generate-string {:villains [{:id "1" :weapon "DAGGER"}]})}
+       "/villain/1"     {:status 200 :content-type "application/json" :body (json/generate-string {:id "1"})}
+       "/weapon/DAGGER" {:status 200 :content-type "application/json" :body (json/generate-string {:id "DAGGER"})}}
+      (let [result (execute-query uri "from hero \n
+                                      from villain with id = hero.villains.id \n 
+                                      from weapon with id = hero.villains.weapon")]
+        (is (= {:villains [{:id "1" :weapon "DAGGER"}]} (get-in result [:hero :result])))
+        (is (= [{:id "1"}] (get-in result [:villain :result])))
+        (is (= [{:id "DAGGER"}] (get-in result [:weapon :result]))))))
+  
+  (testing "With map->list->complex_value" 
+    (with-routes!
+      {"/hero"                  {:status 200 :content-type "application/json" :body (json/generate-string {:villains [{:v {:id "1"}}]})}
+       "/villain/{\"id\":\"1\"}"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1"})}}
+      (let [result (execute-query uri "from hero \n
+                                      from villain with id = hero.villains.v")]
+        (is (= {:villains [{:v {:id "1"}}]} (get-in result [:hero :result])))
+        (is (= [{:id "1"}] (get-in result [:villain :result]))))))
+  
+  (testing "With list->map->list->simple_value and list->map->list->complex_value"
+    (with-routes!
+      {"/heroes"         {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1" :weapons ["DAGGER"]}]}])}
+       "/villain/1"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "1"})}
+       "/weapon/DAGGER"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "DAGGER"})}}
+      (let [result (execute-query uri "from heroes\n
+                                      from villain with id = heroes.villains.id\n 
+                                      from weapon with id = heroes.villains.weapons")]
+        (is (= [{:villains [{:id "1" :weapons ["DAGGER"]}]}] (get-in result [:heroes :result])))
+        (is (= [[{:id "1"}]] (get-in result [:villain :result])))
+        (is (= [[[{:id "DAGGER"}]]] (get-in result [:weapon :result])))))))
 
 ;(deftest error-request-should-throw-exception
 ; (with-routes!
