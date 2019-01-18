@@ -1,6 +1,6 @@
 (ns restql.core.async-request
   (:use [slingshot.slingshot :only [throw+]])
-  (:require [clojure.core.async :refer [chan go go-loop >!! >! <!]]
+  (:require [clojure.core.async :refer [chan go go-loop >! <!]]
             [aleph.http :as http]
             [manifold.deferred :as d]
             [restql.core.query :as query]
@@ -92,7 +92,9 @@
 
 (defn get-after-ctx [{:keys [ctx status response-time request result]}]
   (merge {} ctx request result {:status status
-                                :response-time response-time}))
+                                :response-time response-time})
+  )
+
 
 (defn request-respond-callback [result & {:keys [request
                                                  request-timeout
@@ -232,13 +234,13 @@
 
 (defn query-and-join [requests query-opts]
   (let [perform-func (fn [func requests query-opts]
-                       (go-loop [[ch & others] (map #(func % query-opts) requests)
-                                 result []]
-                         (if ch
-                           (recur others (conj result (<! ch)))
-                           result)))]
+                        (go-loop [[ch & others] (map #(func % query-opts) requests)
+                                  result []]
+                          (if ch
+                            (recur others (conj result (<! ch)))
+                            result)))]
     (cond
-      (sequential? (first requests)) (perform-func query-and-join requests query-opts)
+      (sequential? (first requests))(perform-func query-and-join requests query-opts)
       :else (perform-func verify-and-make-request requests query-opts))))
 
 (defn vector-with-nils? [v]
@@ -246,7 +248,7 @@
        (some nil? v)))
 
 (defn failure? [requests]
-  (or (nil? requests) (vector-with-nils? requests)))    
+  (or (nil? requests) (vector-with-nils? requests)))
 
 (defn- single-request-not-multiplexed? [requests]
   (and  
@@ -255,22 +257,23 @@
     (not (:multiplexed (first requests)))))
 
 (defn perform-request [result-ch query-opts requests]
-    (cond 
-      (failure? requests)
-        (go (>! result-ch {:status nil :body nil}))
-      (single-request-not-multiplexed? requests)
-        (verify-and-make-request (first requests) query-opts result-ch)
-      :else (go (->>
-                  (query-and-join requests query-opts)
-                  (<! )
-                  (>! result-ch)))))
+  (cond
+    (failure? requests)
+      (go (>! result-ch {:status nil :body nil}))
+    (single-request-not-multiplexed? requests)
+      (verify-and-make-request (first requests) query-opts result-ch)
+    :else (go (->>
+                (query-and-join requests query-opts)
+                (<! )
+                (>! result-ch)))))
 
 (defn do-request-url [mappings statement state encoders result-ch query-opts]
   (->> (statement/resolve-chained-values statement state)
        (statement/expand)
        (statement/apply-encoders encoders)
        (request/from-statements mappings)
-       (perform-request result-ch query-opts))
+       (perform-request result-ch query-opts)
+       )
   )
 
 (defn do-request-data [{[entity & path] :from} state result-ch]
