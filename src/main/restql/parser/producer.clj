@@ -40,14 +40,13 @@
         header-rule       (->> query-clauses (find-first :HeaderRule) produce)
         timeout-rule      (->> query-clauses (find-first :TimeoutRule) produce)
         with-rule         (->> query-clauses (find-first :WithRule) produce)
-        with-body-rule    (->> query-clauses (find-first :WithBodyRule) produce)
         only-rule         (->> query-clauses (find-first :OnlyRule) produce)
         hide-rule         (->> query-clauses (find-first :HideRule) produce)
         flags-rule        (->> query-clauses (find-first :FlagsRule) produce)
         ]
     (str alias
          flags-rule
-         " {:from " resource header-rule timeout-rule with-rule with-body-rule only-rule hide-rule " :method " method "}")))
+         " {:from " resource header-rule timeout-rule with-rule only-rule hide-rule " :method " method "}")))
 
 (defn produce-header-rule [content]
   (let [produced-header-items (map produce content)]
@@ -143,11 +142,6 @@
 (defn produce-chaining [path-items]
   (let [produced-path-items (map produce path-items)]
     (str "[" (join " " produced-path-items) "]")))
-
-
-(defn produce-with-body-rule [with-body-rule-items]
-  (let [produced-items (map produce with-body-rule-items)]
-    (str " :with-body {" (join " " produced-items) "}")))
 
 
 (defn format-variable [value]
@@ -271,8 +265,6 @@
       :WithModifierFunctionName    (join-chars "" content)
       :WithModifierFunctionArgList (product-with-modifier-function-arg-list content)
       :WithModifierFunctionArg     (edn/read-string (join-chars "" content))
-
-      :WithBodyRule                (produce-with-body-rule content)
 
       :ComplexParamItem            (produce-complex-param-item content)
       :ComplexParamKey             (join-chars ":" content)

@@ -17,7 +17,7 @@ QueryBlock =
   QueryItem (WS LS WS QueryItem)*;
 
 QueryItem =
-  WS FromRule (WS_MAND HeaderRule)?  (WS_MAND TimeoutRule)?  (WS_MAND WithRule)? (WS_MAND WithBodyRule)?  (WS_MAND (OnlyRule | HideRule))? (WS_MAND FlagsRule)? WS;
+  WS FromRule (WS_MAND HeaderRule)?  (WS_MAND TimeoutRule)?  (WS_MAND WithRule)?  (WS_MAND (OnlyRule | HideRule))? (WS_MAND FlagsRule)? WS;
 
 
 <FromRule> =
@@ -70,9 +70,6 @@ WithParamValueModifierList =
 
 WithParamPrimitiveValue =
   Primitive;
-
-WithBodyRule =
-  KW_WITH_BODY WS_MAND WithRuleItem (WS LS WS WithRuleItem)*;
 
 ListParamValue =
   BEGIN_LIST WS END_LIST |
@@ -168,7 +165,7 @@ IgnoreErrorsFlag =
 <KW_METHOD> =
   ("from" | "to" | "into" | "delete");
 
-HttpMethod = 
+HttpMethod =
   KW_METHOD;
 
 <KW_AS> =
@@ -182,9 +179,6 @@ HttpMethod =
 
 <KW_WITH> =
   <"with"|"params">;
-
-<KW_WITH_BODY> =
-  <"body">;
 
 <KW_ONLY> =
   <"only">;
