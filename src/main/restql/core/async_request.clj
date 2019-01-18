@@ -211,13 +211,10 @@
   (vals)
   (some #(= nil %))))
 
-(defn find-key-by-value [map value]
-  (keep #(when (= (val %) value) (key %)) map))
-
 (defn create-skip-message [request]
   (-> request
     (:query-params)
-    (find-key-by-value nil)
+    (as-> query-params (keep (fn [[k v]] (when (nil? v) k)) query-params))
     (as-> key 
       (str "The request was skipped due to missing {" (clojure.string/join ", " key) "} param value"))))
         
