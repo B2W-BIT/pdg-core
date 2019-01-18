@@ -93,7 +93,7 @@
 (defn get-after-ctx [{:keys [ctx status response-time request result]}]
   (merge {} ctx request result {:status status
                                 :response-time response-time})
-  )
+)
 
 
 (defn request-respond-callback [result & {:keys [request
@@ -294,8 +294,6 @@
     (catch [:type :invalid-resource] e
       (go (>! exception-ch e)))
     (catch [:type :expansion-error] e
-      (go (>! exception-ch e)))
-    (catch [:type :nil-param-value] e
       (go (>! exception-ch e)))
     (catch Object e
       (go (>! exception-ch e)))))
