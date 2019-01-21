@@ -132,7 +132,13 @@
 
     (is (= {:from :done-resource :with {:name [["python" "123"] ["elixir" "345"]]}}
            (statement/resolve-chained-values {:from :done-resource :with {:name [:resource-id :language :xpto :asdf :id]}}
-                                             {:done [[:resource-id {:body {:language [{:xpto {:asdf [{:id "python"} {:id "123"}]}} {:xpto {:asdf [{:id "elixir"} {:id "345"}]}}]}}]]}))))
+                                             {:done [[:resource-id {:body {:language [{:xpto {:asdf [{:id "python"} {:id "123"}]}} {:xpto {:asdf [{:id "elixir"} {:id "345"}]}}]}}]]})))
+    
+    (is (= {:from :weapon, :in :villain.weapons, :with {:id [[["DAGGER"] ["GUN"]] [["SWORD"] ["SHOTGUN"]]]}, :method :get}
+           (statement/resolve-chained-values {:from :weapon, :in :villain.weapons, :with {:id [:villain :weapons]}, :method :get}
+                                             {:done [[:villain [[{:body {:name "1", :weapons ["DAGGER"]}} {:body {:name "2", :weapons ["GUN"]}}]
+                                                                [{:body {:name "3", :weapons ["SWORD"]}} {:body {:name "4", :weapons ["SHOTGUN"]}}]]]]}))))
+  
   (testing "Resolve with encoder"
     (is (= (binding [*print-meta* true]
              (pr-str {:from :resource-name :with {:id ^{:encoder :json} [1 nil] :name ["a" "b"]}}))

@@ -65,32 +65,17 @@
        (count)
        (not= 0)))
 
-(defn get-field-from-statement [statement]
-  (->> statement
-       (:with)
-       (keys)
-       (first)))
-
-(defn get-resource-name-from-statement [statement]
-  (-> (:with statement)
-      (get (get-field-from-statement statement))
-      (second)))
-
-(defn get-value-from-resource-id [state resource-id]
-  (->>  state
-        (:done)
-        (map #(apply assoc {} %))
-        (map :done-resource)
-        (map :body)
-        (map resource-id)
-        (first)))
-
 (defn get-value-from-path [path {body :body}]
   (if (sequential? body)
     (->> body
          (map #(get-in-with-list-support path %))
          (vec))
     (get-in-with-list-support path body)))
+
+(defn get-value-from-resource-list [path resource]
+  (if (sequential? resource)
+    (map #(get-value-from-resource-list path %) resource)
+    (get-value-from-path path resource)))
 
 (defn- get-chain-value-from-done-state [[resource-name & path] state]
   (let [resource (->> state
@@ -99,11 +84,8 @@
                       first
                       second)]
     (if (sequential? resource)
-      (->> resource
-           (flatten)
-           (map (partial get-value-from-path path))
-           (vec))
-      (->> resource (get-value-from-path path)))))
+      (->> resource (map #(get-value-from-resource-list path %)) (vec))
+      (get-value-from-path path resource))))
 
 (defn meta-available? [object]
   (instance? clojure.lang.IMeta object))
