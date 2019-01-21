@@ -60,14 +60,3 @@
     (if (insta/failure? result)
       (handle-error result)
       (handle-success (handle-produce result context) :pretty pretty))))
-
-(comment
-  (parse-query "from cart only id, lines.id, lines.sku")
-  (parse-query "from cart only id")
-
-  ":select #{:id [:lines #{:id :sku}]}"
-
-  (try
-    (parse-query "from cart only lines.id -> match(\"abc\"), lines.sku" :context {})
-    (catch Exception e
-      e)))

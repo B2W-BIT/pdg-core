@@ -11,7 +11,7 @@
 
 (defn invalid-data-key [key]
   (not
-    (#{:from :method :with :with-headers :with-body :timeout :select} key)))
+    (#{:from :in :method :with :with-headers :with-body :timeout :select} key)))
 
 (defn keyword-or-vector? [value]
   (or

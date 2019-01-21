@@ -37,16 +37,16 @@
         method            (->> query-clauses (find-first :HttpMethod) produce)
         alias-rule        (->> query-clauses (find-first :ResultAlias))
         alias             (if (nil? alias-rule) resource (produce alias-rule))
+        in-rule           (->> query-clauses (find-first :ResultIn) produce)
         header-rule       (->> query-clauses (find-first :HeaderRule) produce)
         timeout-rule      (->> query-clauses (find-first :TimeoutRule) produce)
         with-rule         (->> query-clauses (find-first :WithRule) produce)
         only-rule         (->> query-clauses (find-first :OnlyRule) produce)
         hide-rule         (->> query-clauses (find-first :HideRule) produce)
-        flags-rule        (->> query-clauses (find-first :FlagsRule) produce)
-        ]
+        flags-rule        (->> query-clauses (find-first :FlagsRule) produce)]
     (str alias
          flags-rule
-         " {:from " resource header-rule timeout-rule with-rule only-rule hide-rule " :method " method "}")))
+         " {:from " resource in-rule header-rule timeout-rule with-rule only-rule hide-rule " :method " method "}")))
 
 (defn produce-header-rule [content]
   (let [produced-header-items (map produce content)]
@@ -164,6 +164,9 @@
 (defn produce-hide-rule []
   " :select :none")
 
+(defn produce-in-rule [content]
+  (str " :in " (join-chars ":" content)))
+
 (defn produce-only-rule [only-rule-items]
   (let [produced-items (map produce only-rule-items)]
     (str " " (only/format produced-items))))
@@ -236,6 +239,7 @@
       ; Keeping from for "get" default for backwards compatibility reasons
       :HttpMethod                  (produce-http-method content)
       :ResultAlias                 (join-chars ":" content)
+      :ResultIn                    (produce-in-rule content)
 
       :HeaderRule                  (produce-header-rule content)
       :HeaderRuleItem              (produce-header-rule-item content)

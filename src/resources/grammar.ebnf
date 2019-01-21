@@ -19,14 +19,16 @@ QueryBlock =
 QueryItem =
   WS FromRule (WS_MAND HeaderRule)?  (WS_MAND TimeoutRule)?  (WS_MAND WithRule)?  (WS_MAND (OnlyRule | HideRule))? (WS_MAND FlagsRule)? WS;
 
-
 <FromRule> =
-  HttpMethod WS_MAND FromResource (WS_MAND KW_AS WS_MAND ResultAlias)?;
+  HttpMethod WS_MAND FromResource (WS_MAND KW_AS WS_MAND ResultAlias)? (WS_MAND KW_IN WS_MAND ResultIn)?;
 
 FromResource =
   Identifier;
 
 ResultAlias =
+  Identifier;
+
+ResultIn =
   Identifier;
 
 TimeoutRule =
@@ -170,6 +172,9 @@ HttpMethod =
 
 <KW_AS> =
   <"as">;
+
+<KW_IN> =
+  <"in">;  
 
 <KW_HEADERS> =
   <"headers">;

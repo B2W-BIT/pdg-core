@@ -68,13 +68,12 @@
 (defn get-value-from-path [path {body :body}]
   (if (sequential? body)
     (->> body
-         (map #(get-in-with-list-support path %))
-         (vec))
+         (map #(get-in-with-list-support path %)))
     (get-in-with-list-support path body)))
 
 (defn get-value-from-resource-list [path resource]
   (if (sequential? resource)
-    (map #(get-value-from-resource-list path %) resource)
+    (->> resource (map #(get-value-from-resource-list path %)) (vec))
     (get-value-from-path path resource)))
 
 (defn- get-chain-value-from-done-state [[resource-name & path] state]
