@@ -329,3 +329,26 @@
       (is (= 408 (get-in result [:sidekick :details :status])))
       (is (not (nil? (get-in result [:sidekick :result :message])))))))
 
+(deftest request-with-flatten
+  (testing "Flatten single value"
+    (with-routes!
+      {"/hero" (hero-route)
+       {:path "/sidekick" :query-params {:id "I%27m+hero"}} (sidekick-route)}
+      (let [result (execute-query uri "from hero \n from sidekick with id = hero.hi -> flatten")]
+        (is (= 200 (get-in result [:hero :details :status])))
+        (is (= 200 (get-in result [:sidekick :details :status]))))))
+  (testing "Flatten list value"
+    (with-routes!
+      {"/hero" (hero-route)
+       {:path "/sidekick" :query-params {:id "%5B%221%22%2C%222%22%5D"}} (sidekick-route)}
+      (let [result (execute-query uri "from hero \n from sidekick with id = hero.villains -> flatten")]
+        (is (= 200 (get-in result [:hero :details :status])))
+        (is (= 200 (get-in result [:sidekick :details :status]))))))
+  (testing "Flatten path list value"
+    (with-routes!
+      {"/hero" {:status 200 :body (json/generate-string {:villains [{:id "1" :weapon {:name "FINGGER"}}
+                                                                    {:id "2" :weapon {:name "FIREGUN"}}]})}
+       {:path "/sidekick" :query-params {:id "%5B%22FINGGER%22%2C%22FIREGUN%22%5D"}} (sidekick-route)}
+      (let [result (execute-query uri "from hero \n from sidekick with id = hero.villains.weapon.name -> flatten")]
+        (is (= 200 (get-in result [:hero :details :status])))
+        (is (= 200 (get-in result [:sidekick :details :status])))))))

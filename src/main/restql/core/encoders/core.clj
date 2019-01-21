@@ -27,10 +27,11 @@
 (defn get-encoder-key [data]
   (let [from-meta (-> data meta :encoder)]
     (cond
-      from-meta   from-meta
-      (set? data) :set
-      (map? data) :json
-      :else       :default)))
+      from-meta          from-meta
+      (set? data)        :set
+      (map? data)        :json
+      (sequential? data) :json
+      :else              :default)))
 
 (defn encode [encoders data]
   (-> encoders
