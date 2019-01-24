@@ -3,20 +3,16 @@
             [clojure.tools.logging :as log]
             [slingshot.slingshot :refer [throw+ try+]]))
 
-(defn default-encoder [data]
-  (if (nil? data) nil
-  (str data)))
-
 (defn set-encoder [data]
   (log/warn "use of deprecated encoder :set on" data)
   (->> data
        (map str)
-       (into [])
-       ))
+       (into [])))
 
 (def base-encoders
   {:json json/encode
-   :set set-encoder})
+   :set set-encoder
+   :default identity})
 
 (defn perfom-encoding [encoders encoding value]
   (if (contains? encoders encoding)
@@ -30,13 +26,11 @@
       from-meta          from-meta
       (set? data)        :set
       (map? data)        :json
-      (sequential? data) :json
       :else              :default)))
 
 (defn encode [encoders data]
   (-> encoders
       (merge base-encoders)
-      (assoc :default default-encoder)
       (perfom-encoding (get-encoder-key data) data)
   )
 )

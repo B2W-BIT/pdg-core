@@ -9,8 +9,6 @@
             [restql.hooks.core :as hook]
             [restql.core.extractor :refer [traverse]]
             [restql.core.util.deep-merge :refer [deep-merge]]
-            [aleph.http :as http]
-            [manifold.deferred :as d]
             [clojure.tools.logging :as log]
             [slingshot.slingshot :refer [try+]]
             [cheshire.core :as json]
@@ -232,7 +230,7 @@
   (or (nil? requests) (vector-with-nils? requests)))
 
 (defn- single-request-not-multiplexed? [requests]
-  (and  
+  (and
     (= 1 (count requests))
     (not (sequential? (first requests)))
     (not (:multiplexed (first requests)))))

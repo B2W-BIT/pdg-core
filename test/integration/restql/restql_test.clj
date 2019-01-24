@@ -219,6 +219,11 @@
     {{:path "/hero" :query-params {:bag "%7B%22capacity%22%3A10%7D"}} (hero-route)}
     (let [result (execute-query uri "from hero with bag = {capacity: 10} -> json")]
       (is (= 200 (get-in result [:hero :details :status])))
+      (is (= {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]} (get-in result [:hero :result])))))
+  (with-routes!
+    {{:path "/hero" :query-params {:bag "%5B10%2C20%5D"}} (hero-route)}
+    (let [result (execute-query uri "from hero with bag = [10, 20] -> flatten -> json")]
+      (is (= 200 (get-in result [:hero :details :status])))
       (is (= {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]} (get-in result [:hero :result]))))))
 
 (deftest request-with-encoder-2
@@ -243,7 +248,7 @@
       {(fn [request]
          (and (= (:path request) "/hero")
               (= (:method request) "POST")
-              (= (get-stub-body request) (json/generate-string {:id "1"})))) (hero-route)}
+              (= (get-stub-body request) (json/generate-string {:id 1})))) (hero-route)}
       (let [result (execute-query uri "to hero with id = 1")]
         (is (= 200 (get-in result [:hero :details :status]))))))
 
@@ -312,7 +317,7 @@
       (is (not (nil? (get-in result [:sidekick :result :message])))))))
 
 (deftest request-with-flatten
-  
+
   (testing "Flatten single value"
     (with-routes!
       {"/hero" (hero-route)
@@ -320,20 +325,20 @@
       (let [result (execute-query uri "from hero \n from sidekick with id = hero.hi -> flatten")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status]))))))
-  
+
   (testing "Flatten list value"
     (with-routes!
       {"/hero" (hero-route)
-       {:path "/sidekick" :query-params {:id "%5B%221%22%2C%222%22%5D"}} (sidekick-route)}
+      {:path "/sidekick" :query-params {:id "2"}} (sidekick-route)}
       (let [result (execute-query uri "from hero \n from sidekick with id = hero.villains -> flatten")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status]))))))
-  
+
   (testing "Flatten path list value"
     (with-routes!
       {"/hero" {:status 200 :body (json/generate-string {:villains [{:id "1" :weapon {:name "FINGGER"}}
                                                                     {:id "2" :weapon {:name "FIREGUN"}}]})}
-       {:path "/sidekick" :query-params {:id "%5B%22FINGGER%22%2C%22FIREGUN%22%5D"}} (sidekick-route)}
+       {:path "/sidekick" :query-params {:id "FIREGUN"}} (sidekick-route)}
       (let [result (execute-query uri "from hero \n from sidekick with id = hero.villains.weapon.name -> flatten")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status])))))))
@@ -349,7 +354,7 @@
       (is (nil? (get-in result [:villain :result])))
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["1" "2"]})}
      "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1" :name "Lex"})}
@@ -360,7 +365,7 @@
       (is (nil? (get-in result [:villain :result])))
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string {:villains [{:id "1"} {:id "2"}]})}
      "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1" :name "Lex"})}
@@ -371,9 +376,9 @@
       (is (nil? (get-in result [:villain :result])))
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))))
-  
+
   (with-routes!
-   {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]} 
+   {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
                                                                                              {:villains [{:id "3"} {:id "4"}]}])}
     "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1" :name "Lex"})}
     "/villain/2"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "2" :name "Zod"})}
@@ -386,7 +391,7 @@
      (is (nil? (get-in result [:villain :result])))
      (is (get-in result [:heroes :details]))
      (is (get-in result [:villain :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1" :weapons ["DAGGER"]}
                                                                                                           {:id "2" :weapons ["GUN"]}]}
@@ -401,18 +406,18 @@
      "/weapon/SWORD"    {:status 200 :content-type "application/json" :body (json/generate-string {:id "SWORD"})}
      "/weapon/SHOTGUN"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "SHOTGUN"})}}
     (let [result (execute-query uri "from heroes\n
-                                      from villain in heroes.villains.id with id = heroes.villains.id\n 
+                                      from villain in heroes.villains.id with id = heroes.villains.id\n
                                       from weapon in heroes.villains.weapons with id = heroes.villains.weapons")]
-      (is (= [{:villains [{:id {:name "Lex"} :weapons [{:id "DAGGER"}]} 
+      (is (= [{:villains [{:id {:name "Lex"} :weapons [{:id "DAGGER"}]}
                           {:id {:name "Zod"} :weapons [{:id "GUN"}]}]}
-              {:villains [{:id {:name "Elektra"} :weapons [{:id "SWORD"}]} 
+              {:villains [{:id {:name "Elektra"} :weapons [{:id "SWORD"}]}
                           {:id {:name "Dracula"} :weapons [{:id "SHOTGUN"}]}]}] (get-in result [:heroes :result])))
       (is (nil? (get-in result [:villain :result])))
       (is (nil? (get-in result [:weapon :result])))
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))
       (is (get-in result [:weapon :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"}]}])}
      "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:name "1" :weapons ["DAGGER"]})}
@@ -424,7 +429,7 @@
      "/weapon/SHOTGUN"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "SHOTGUN"})}
      "/weapon/SWORD"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "SWORD"})}}
     (let [result (execute-query uri "from heroes\n
-                                      from villain with id = [1,2,3,4]\n 
+                                      from villain with id = [1,2,3,4]\n
                                       from weapon in villain.weapons with id = villain.weapons")]
       (is (= [{:villains [{:id "1"}]}] (get-in result [:heroes :result])))
       (is (= [{:name "1", :weapons [{:id "DAGGER"}]}
@@ -435,7 +440,7 @@
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))
       (is (get-in result [:weapon :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
                                                                                               {:villains [{:id "3"} {:id "4"}]}])}
@@ -448,7 +453,7 @@
      "/weapon/SHOTGUN"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "SHOTGUN"})}
      "/weapon/SWORD"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "SWORD"})}}
     (let [result (execute-query uri "from heroes\n
-                                      from villain with id = heroes.villains.id\n 
+                                      from villain with id = heroes.villains.id\n
                                       from weapon in villain.weapons with id = villain.weapons")]
       (is (= [{:villains [{:id "1"} {:id "2"}]}
               {:villains [{:id "3"} {:id "4"}]}] (get-in result [:heroes :result])))
@@ -460,7 +465,7 @@
       (is (get-in result [:heroes :details]))
       (is (get-in result [:villain :details]))
       (is (get-in result [:weapon :details]))))
-  
+
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
                                                                                               {:villains [{:id "3"} {:id "4"}]}])}
@@ -473,7 +478,7 @@
      "/weapon/SHOTGUN"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "SHOTGUN"})}
      "/weapon/SWORD"    {:status 200 :content-type "application/json" :body (json/generate-string {:id "SWORD"})}}
     (let [result (execute-query uri "from heroes\n
-                                      from villain in heroes.villains with id = heroes.villains.id\n 
+                                      from villain in heroes.villains with id = heroes.villains.id\n
                                       from weapon in heroes.villains.weapons with id = villain.weapons")]
       (is (= [{:villains [{:name "1", :weapons [{:id "DAGGER"}]}
                           {:name "2", :weapons [{:id "GUN"}]}]}
@@ -493,7 +498,7 @@
      "/weapon/GUN"      {:status 200 :content-type "application/json" :body (json/generate-string {:id "GUN"})}
      "/weapon/DAGGER"   {:status 404 :content-type "application/json" :body (json/generate-string {:error "NOT_FOUND"})}}
     (let [result (execute-query uri "from heroes\n
-                                      from villain in heroes.villains.id with id = heroes.villains.id\n 
+                                      from villain in heroes.villains.id with id = heroes.villains.id\n
                                       from weapon in heroes.villains.weapons with id = heroes.villains.weapons")]
       (is (= [{:villains [{:id {:name "Lex"} :weapons [{:error "NOT_FOUND"}]}
                           {:id {:error "UNEXPECTED_ERROR"} :weapons [{:id "GUN"}]}]}] (get-in result [:heroes :result])))

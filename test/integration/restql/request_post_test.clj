@@ -37,7 +37,7 @@
 
 (deftest request-with-post-query
   (testing "Post with simple body"
-    (with-routes! {(stub-post-route "/hero" {:id "1"}) (hero-route)}
+    (with-routes! {(stub-post-route "/hero" {:id 1}) (hero-route)}
       (let [result (execute-query uri "to hero with id = 1")]
         (is (= 200 (get-in result [:hero :details :status]))))))
 
@@ -47,24 +47,24 @@
         (is (= 200 (get-in result [:weapon :details :status]))))))
 
   (testing "Post with body, path and query string variables"
-    (with-routes! {(stub-post-route "/weapon/1" {:kills "4"} {:villain "Joker"}) (hero-route)}
+    (with-routes! {(stub-post-route "/weapon/1" {:kills 4} {:villain "Joker"}) (hero-route)}
       (let [result (execute-query uri "to weapon with id = 1, villain = \"Joker\", kills = 4")]
         (is (= 200 (get-in result [:weapon :details :status]))))))
 
   (testing "Post with chained params"
     (with-routes! {"/hero" (hero-route)
-                   (stub-post-route "/weapon/1" {:kills "1"} {:villain "Joker"}) (hero-route)}
+                   (stub-post-route "/weapon/1" {:kills 1} {:villain "Joker"}) (hero-route)}
       (let [result (execute-query uri "from hero \n to weapon with id = hero.weaponId, villain = hero.enemy, kills = 1")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:weapon :details :status]))))))
 
   (testing "Post with variable rule"
-    (with-routes! {(stub-post-route "/hero" {:kills "1"}) (hero-route)}
+    (with-routes! {(stub-post-route "/hero" {:kills 1}) (hero-route)}
       (let [result (execute-query uri "to hero with $body" {:body {:kills 1}})]
         (is (= 200 (get-in result [:hero :details :status]))))))
 
   (testing "Post with variable rule and params"
-    (with-routes! {(stub-post-route "/weapon/1" {:kills "1"} {:villain "Joker"}) (hero-route)}
+    (with-routes! {(stub-post-route "/weapon/1" {:kills 1} {:villain "Joker"}) (hero-route)}
       (let [result (execute-query uri "to weapon with $body, id = $id, villain = \"Joker\"" {:body {:kills 1} :id 1})]
         (is (= 200 (get-in result [:weapon :details :status])))))))
 

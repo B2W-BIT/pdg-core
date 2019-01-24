@@ -157,8 +157,13 @@
                                                        {:done [[:done-resource {:body {:id {} :class "rest"}}]]})))))))
 
 (deftest apply-encoders-test
+  (testing "Resolve without encoder on single return value"
+    (is (= [{:from :resource-name :with {:bag "{\"capacity\":10}" :name ["a" "b"]}}]
+           (statement/apply-encoders nil
+                                     [{:from :resource-name
+                                       :with {:bag {:capacity 10} :name ["a" "b"]}}]))))
   (testing "Resolve with encoder on single return value"
     (is (= [{:from :resource-name :with {:bag "{\"capacity\":10}" :name "[\"a\",\"b\"]"}}]
            (statement/apply-encoders nil
                                      [{:from :resource-name
-                                       :with {:bag {:capacity 10} :name ["a" "b"]}}])))))
+                                       :with {:bag {:capacity 10} :name ^{:encoder :json} ["a" "b"]}}])))))
