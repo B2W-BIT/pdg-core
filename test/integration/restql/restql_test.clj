@@ -231,24 +231,6 @@
       (is (= 200 (get-in result [:sidekick :details :status])))
       (is (= {:hi "I'm sidekick"} (get-in result [:sidekick :result]))))))
 
-(deftest request-with-missing-param
-  (with-routes!
-    {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}
-    (let [result (execute-query uri "from hero with name = $name, id = $id" {:name "Dwayne \"The Rock\" Johnson"})]
-      (is (= 400 (get-in result [:hero :details :status]))))))
-
-(deftest request-with-multiplexed-missing-param
-  (with-routes!
-    {{:path "/hero" :query-params {:name "Spiderman"}} (hero-route)
-      {:path "/hero" :query-params {:name "Captain+America"}} (hero-route)}
-    (let [response (execute-query uri "from hero with name = $name, id = $id" {:name ["Spiderman" "Captain America"]})
-          details (get-in response [:hero :details])
-          result (get-in response [:hero :result])]
-      (is (= 400 (:status (first details))))
-      (is (= 400 (:status (second details))))
-      (is (= ["The request was skipped due to missing {:id} param value"
-        "The request was skipped due to missing {:id} param value"] result)))))
-
 (deftest request-with-quoted-param
   (with-routes!
     {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}

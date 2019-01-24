@@ -9,6 +9,8 @@
             [restql.hooks.core :as hook]
             [restql.core.extractor :refer [traverse]]
             [restql.core.util.deep-merge :refer [deep-merge]]
+            [aleph.http :as http]
+            [manifold.deferred :as d]
             [clojure.tools.logging :as log]
             [slingshot.slingshot :refer [try+]]
             [cheshire.core :as json]
@@ -96,6 +98,7 @@
 )
 
 
+
 (defn request-respond-callback [result & {:keys [request
                                                  request-timeout
                                                  time-before
@@ -166,7 +169,12 @@
                                  :metadata (:metadata request)
                                  :body     {:message (get-error-message exception)}}))))))
 
-(defn make-request [request query-opts output-ch]
+(defn make-request
+  ([request query-opts]
+   (let [output-ch (chan)]
+     (make-request request query-opts output-ch)
+     output-ch))
+  ([request query-opts output-ch]
    (let [request         (parse-query-params request)
          time-before     (System/currentTimeMillis)
          request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
@@ -203,31 +211,7 @@
                                                      :time-before time-before
                                                      :output-ch output-ch
                                                      :before-hook-ctx before-hook-ctx))
-         (d/success! 1))))
-
-(defn check-for-missing-param [request]
-  (->> request
-  (:query-params)
-  (vals)
-  (some #(= nil %))))
-
-(defn create-skip-message [request]
-  (-> request
-    (:query-params)
-    (as-> query-params (keep (fn [[k v]] (when (nil? v) k)) query-params))
-    (as-> key 
-      (str "The request was skipped due to missing {" (clojure.string/join ", " key) "} param value"))))
-        
-(defn verify-and-make-request 
-  ([request query-opts]
-    (let [output-ch (chan)]
-      (verify-and-make-request request query-opts output-ch)
-      output-ch))
-  ([request query-opts output-ch]
-    (if (check-for-missing-param request)
-      (go (>! output-ch {:status 400 :body (create-skip-message request)}))
-      (make-request request query-opts output-ch)))
-  )
+         (d/success! 1)))))
 
 (defn query-and-join [requests query-opts]
   (let [perform-func (fn [func requests query-opts]
@@ -238,7 +222,7 @@
                             result)))]
     (cond
       (sequential? (first requests))(perform-func query-and-join requests query-opts)
-      :else (perform-func verify-and-make-request requests query-opts))))
+      :else (perform-func make-request requests query-opts))))
 
 (defn vector-with-nils? [v]
   (and (seq? v)
@@ -258,7 +242,7 @@
     (failure? requests)
       (go (>! result-ch {:status nil :body nil}))
     (single-request-not-multiplexed? requests)
-      (verify-and-make-request (first requests) query-opts result-ch)
+      (make-request (first requests) query-opts result-ch)
     :else (go (->>
                 (query-and-join requests query-opts)
                 (<! )
