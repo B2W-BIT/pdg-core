@@ -48,6 +48,22 @@
                         (->> query-param-value (map decode-url) (into []))
                         (decode-url query-param-value))) %)))
 
+(defn- get-forward-params [query-opts]
+  (-> query-opts
+      (some-> :forward-params)
+      (as-> forward-params (if (nil? forward-params) {} forward-params))))
+
+(defn- get-query-params [request]
+  (-> request
+      (some-> :query-params)
+      (as-> query-params (if (nil? query-params) {} query-params))))
+
+(defn- valid-query-params [request query-opts]
+  (->> (get-query-params request)
+       (merge (get-forward-params query-opts))
+       (filter (fn [[_ v]] (some? v)))
+       (into {})))
+
 (defn convert-response [{:keys [status body headers]} {:keys [debugging metadata time url params timeout resource]}]
   (let [parsed (if (string? body) body (slurp body))
         base {:status        status
@@ -176,8 +192,6 @@
    (let [request         (parse-query-params request)
          time-before     (System/currentTimeMillis)
          request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
-         forward         (some-> query-opts :forward-params)
-         forward-params  (if (nil? forward) {} forward)
          request-map     {:url                (:url request)
                           :request-method     (:method request)
                           :content-type       "application/json"
@@ -185,7 +199,7 @@
                           :connection-timeout request-timeout
                           :request-timeout    request-timeout
                           :read-timeout       request-timeout
-                          :query-params       (into (:query-params request) forward-params)
+                          :query-params       (valid-query-params request query-opts)
                           :headers            (:with-headers request)
                           :time               time-before
                           :body               (some-> request :body json/encode)
@@ -251,9 +265,7 @@
        (statement/expand)
        (statement/apply-encoders encoders)
        (request/from-statements mappings)
-       (perform-request result-ch query-opts)
-       )
-  )
+       (perform-request result-ch query-opts)))
 
 (defn do-request-data [{[entity & path] :from} state result-ch]
   (go (>! result-ch (-> (query/find-query-item entity (:done state))
