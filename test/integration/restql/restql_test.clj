@@ -31,8 +31,10 @@
 
 (defn execute-query
   ([base-url query]
-   (execute-query base-url query {}))
+   (execute-query base-url query {} {}))
   ([base-url query params]
+   (execute-query base-url query params {}))
+  ([base-url query params options]
    (restql/execute-query :mappings {:hero                (str base-url "/hero")
                                     :heroes              (str base-url "/heroes")
                                     :sidekick            (str base-url "/sidekick")
@@ -40,9 +42,11 @@
                                     :weapon              (str base-url "/weapon/:id")
                                     :product             (str base-url "/product/:id")
                                     :product-price       (str base-url "/price/:productId")
-                                    :product-description (str base-url "/description/:productId")}
+                                    :product-description (str base-url "/description/:productId")
+                                    :fail                "http://not.a.working.endpoint"}
                          :query query
-                         :params params)))
+                         :params params
+                         :options options)))
 
 (deftest simple-request
   (with-routes!
@@ -305,6 +309,13 @@
     (let [result (execute-query uri "from product with id = $id" {:id "1234"})]
       (is (= 200 (get-in result [:product :details :status])))
       (is (= {:product "1234"} (get-in result [:product :result]))))))
+
+(deftest failing-request-debug-mode
+  (let [uri "http://not.a.working.endpoint"
+        result (execute-query uri "from fail" {} {:debugging true})]
+    (is (= 0 (get-in result [:fail :details :status])))
+    (is (= "http://not.a.working.endpoint?" (get-in result [:fail :details :url])))
+    (is (= 5000 (get-in result [:fail :details :timeout])))))
 
 (deftest shouldnt-throw-exeption-if-chainned-resource-timeout-and-ignore-error
   (with-routes!

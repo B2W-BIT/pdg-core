@@ -163,9 +163,8 @@
                                                                       :result error-data}))]
               (log/warn error-data "Request failed")
               ; Send error response to channel
-              (go (>! output-ch {:status   error-status
-                                 :metadata (:metadata request)
-                                 :body     {:message (get-error-message exception)}}))))))
+              (go (>! output-ch (merge (select-keys error-data [:success :status :metadata :url :params :timeout :response-time]) 
+                                       {:body {:message (get-error-message exception)}})))))))
 
 (defn make-request
   ([request query-opts]
