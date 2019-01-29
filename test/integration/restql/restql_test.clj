@@ -290,12 +290,6 @@
       (is (= 408 (get-in result [:hero :details :status])))
       (is (= {:message "RequestTimeoutException"} (get-in result [:hero :result]))))))
 
-;(deftest unreachable-resource-should-return-503
-; (let [result (execute-query "http://localhost:9999" "from hero ignore-errors")]
-;  (is (= 503 (get-in result [:hero :details :status])))
-;)
-;)
-
 (deftest chained-call
   (with-routes! {"/hero" (hero-route) "/sidekick" (sidekick-route)}
     (let [result (execute-query uri "from hero\nfrom sidekick")]
@@ -314,7 +308,7 @@
   (let [uri "http://not.a.working.endpoint"
         result (execute-query uri "from fail" {} {:debugging true})]
     (is (= 0 (get-in result [:fail :details :status])))
-    (is (= "http://not.a.working.endpoint?" (get-in result [:fail :details :url])))
+    (is (= "http://not.a.working.endpoint" (get-in result [:fail :details :url])))
     (is (= 5000 (get-in result [:fail :details :timeout])))))
 
 (deftest shouldnt-throw-exeption-if-chainned-resource-timeout-and-ignore-error

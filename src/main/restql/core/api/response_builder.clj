@@ -13,7 +13,7 @@
         (nil? (:parse-error query-response))))
 
 (defn- mount-url [url params]
-    (str url "?" (if (nil? params) "" (form-encode params))))
+    (str url (if (empty? params) "" (str "?" (form-encode params)))))
 
 (defn stringify-values [a-map]
     (reduce-kv (fn [m k v] (assoc m k (str v))) {} a-map))
