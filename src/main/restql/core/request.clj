@@ -22,8 +22,8 @@
   (-> statement
       (get :with)
       (as-> params (if (is-post-or-put? statement)
-                       (url/filter-explicit-query-params (url/from-mappings mappings statement) params)
-                       (url/dissoc-path-params (url/from-mappings mappings statement) params)))
+                     (url/filter-explicit-query-params (url/from-mappings mappings statement) params)
+                     (url/dissoc-path-params (url/from-mappings mappings statement) params)))
       (as-> params (if-not (empty? params) (assoc? {} :query-params params) {}))
       (conj request)))
 
