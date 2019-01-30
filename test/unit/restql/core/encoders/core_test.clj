@@ -16,5 +16,7 @@
   (is (= "a" (encode nil "a")))
   (is (= ["a" "b"] (encode nil ["a" "b"])))
   (is (= [100.00] (encode nil [100.00])))
+  (is (= ["{\"name\":\"Bruce\"}"] (encode nil [{:name "Bruce"}])))
+  (is (= [["{\"name\":\"Bruce\"}"]["{\"name\":\"Lex\"}"]] (encode nil [[{:name "Bruce"}] [{:name "Lex"}]])))
   (is (nil? (encode nil nil))))
 

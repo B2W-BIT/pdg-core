@@ -14,12 +14,6 @@
    :set set-encoder
    :default identity})
 
-(defn perfom-encoding [encoders encoding value]
-  (if (contains? encoders encoding)
-    (let [encoding-fn (encoders encoding)]
-      (encoding-fn value))
-    (throw+ {:type :unrecognized-encoding :data encoding})))
-
 (defn get-encoder-key [data]
   (let [from-meta (-> data meta :encoder)]
     (cond
@@ -28,9 +22,16 @@
       (map? data)        :json
       :else              :default)))
 
+(defn perfom-encoding [encoders data]
+  (let [encoder-key (get-encoder-key data)]
+    (cond
+      (and (sequential? data) (= encoder-key :default)) (map (partial perfom-encoding encoders) data)
+      :else (let [encoder-fn (if-not (nil? encoder-key) (encoders encoder-key))]
+              (if-not (nil? encoder-fn)
+                (encoder-fn data)
+                (throw+ {:type :unrecognized-encoding :data encoder-key}))))))
+
 (defn encode [encoders data]
-  (-> encoders
-      (merge base-encoders)
-      (perfom-encoding (get-encoder-key data) data)
-  )
-)
+  (-> base-encoders
+      (merge encoders)
+      (perfom-encoding data)))

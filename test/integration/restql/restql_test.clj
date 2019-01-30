@@ -383,19 +383,19 @@
       (is (get-in result [:villain :details]))))
 
   (with-routes!
-   {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
-                                                                                             {:villains [{:id "3"} {:id "4"}]}])}
-    "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1" :name "Lex"})}
-    "/villain/2"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "2" :name "Zod"})}
-    "/villain/3"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "3" :name "Elektra"})}
-    "/villain/4"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "4" :name "Dracula"})}}
-   (let [result (execute-query uri "from heroes\n
+    {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
+                                                                                              {:villains [{:id "3"} {:id "4"}]}])}
+     "/villain/1"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "1" :name "Lex"})}
+     "/villain/2"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "2" :name "Zod"})}
+     "/villain/3"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "3" :name "Elektra"})}
+     "/villain/4"  {:status 200 :content-type "application/json" :body (json/generate-string {:id "4" :name "Dracula"})}}
+    (let [result (execute-query uri "from heroes\n
                                      from villain in heroes.villains with id = heroes.villains.id")]
-     (is (= [{:villains [{:id "1" :name "Lex"} {:id "2" :name "Zod"}]}
-             {:villains [{:id "3" :name "Elektra"} {:id "4" :name "Dracula"}]}] (get-in result [:heroes :result])))
-     (is (nil? (get-in result [:villain :result])))
-     (is (get-in result [:heroes :details]))
-     (is (get-in result [:villain :details]))))
+      (is (= [{:villains [{:id "1" :name "Lex"} {:id "2" :name "Zod"}]}
+              {:villains [{:id "3" :name "Elektra"} {:id "4" :name "Dracula"}]}] (get-in result [:heroes :result])))
+      (is (nil? (get-in result [:villain :result])))
+      (is (get-in result [:heroes :details]))
+      (is (get-in result [:villain :details]))))
 
   (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1" :weapons ["DAGGER"]}
@@ -513,7 +513,7 @@
       (is (get-in result [:villain :details]))
       (is (get-in result [:weapon :details]))))
 
-(with-routes!
+  (with-routes!
     {"/heroes"     {:status 200 :content-type "application/json" :body (json/generate-string [{:villains [{:id "1"} {:id "2"}]}
                                                                                               {:villains [{:id "3"} {:id "4"}]}])}
      "/weapon/1"   {:status 200 :content-type "application/json" :body (json/generate-string {:id "DAGGER"})}
@@ -529,3 +529,58 @@
       (is (nil? (get-in result [:weapon :result])))
       (is (get-in result [:heroes :details]))
       (is (get-in result [:weapon :details])))))
+
+(deftest with-list-param
+  (testing "List with single value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "1"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains []})}}
+      (let [result (execute-query uri "from hero with id = [\"1\"]")]
+        (is (= 200 (:status (first (get-in result [:hero :details])))))
+        (is (= [{:villains []}] (get-in result [:hero :result]))))))
+
+  (testing "List with multiple value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "1"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["a"]})}
+       {:path "/hero" :query-params {:id "2"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["b"]})}}
+      (let [result (execute-query uri "from hero with id = [\"1\", \"2\"]")]
+        (is (= 200 (:status (first (get-in result [:hero :details])))))
+        (is (= 200 (:status (second (get-in result [:hero :details])))))
+        (is (= [{:villains ["a"]} {:villains ["b"]}] (get-in result [:hero :result]))))))
+
+  (testing "List with single map value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "%7B%22num%22%3A%221%22%7D"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains []})}}
+      (let [result (execute-query uri "from hero with id = [{num: \"1\"}]")]
+        (is (= 200 (:status (first (get-in result [:hero :details])))))
+        (is (= [{:villains []}] (get-in result [:hero :result]))))))
+
+  (testing "List with multiple map value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "%7B%22num%22%3A%221%22%7D"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["a"]})}
+       {:path "/hero" :query-params {:id "%7B%22num%22%3A%222%22%7D"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["b"]})}}
+      (let [result (execute-query uri "from hero with id = [{num: \"1\"},{num: \"2\"}]")]
+        (is (= 200 (:status (first (get-in result [:hero :details])))))
+        (is (= 200 (:status (second (get-in result [:hero :details])))))
+        (is (= [{:villains ["a"]} {:villains ["b"]}] (get-in result [:hero :result]))))))
+
+  (testing "List flatten multiple value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "2"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["b"]})}}
+      (let [result (execute-query uri "from hero with id = [\"1\", \"2\"] -> flatten")]
+        (is (= 200 (:status (get-in result [:hero :details]))))
+        (is (= {:villains ["b"]} (get-in result [:hero :result]))))))
+
+  (testing "Map with multiple flatten map value"
+    (with-routes!
+      {{:path "/hero" :query-params {:id "%7B%22num%22%3A%222%22%7D"}}
+       {:status 200 :content-type "application/json" :body (json/generate-string {:villains ["b"]})}}
+      (let [result (execute-query uri "from hero with id = [{num: \"1\"},{num: \"2\"}] -> flatten")]
+        (is (= 200 (:status (get-in result [:hero :details]))))
+        (is (= {:villains ["b"]} (get-in result [:hero :result])))))))
