@@ -204,12 +204,12 @@
         (is (= [[{:id "1"}]] (get-in result [:villain :result])))
         (is (= [[[{:id "DAGGER"}]]] (get-in result [:weapon :result])))))))
 
-;(deftest error-request-should-throw-exception
-; (with-routes!
-;  {"/hero" (assoc (hero-route) :status 500)}
-; (is (thrown? Exception (execute-query uri "from hero")))
-;)
-;)
+(deftest request-with-ignore-errors-should-have-ignore-errors-in-metadata
+  (with-routes!
+    {"/hero" (assoc (hero-route) :status 500)}
+    (let [result (execute-query uri "from hero ignore-errors")]
+      (is (= 500 (get-in result [:hero :details :status])))
+      (is (= {:ignore-errors "ignore"} (get-in result [:hero :details :metadata]))))))
 
 (deftest error-request-with-ignore-errors-shouldnt-throw-exception
   (with-routes!

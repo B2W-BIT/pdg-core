@@ -36,10 +36,15 @@
       (as-> params (if-not (empty? params) (assoc? {} :body params) {}))
       (conj request)))
 
+(defn- add-metadata-from-statement-meta [statement]
+  (if-not (empty? (meta statement))
+    (assoc statement :metadata (meta statement))))
+
 (def params-ignored-from-request [:with])
 
 (defn- statement->request [mappings statement]
   (->> (apply dissoc statement params-ignored-from-request)
+       (add-metadata-from-statement-meta)
        (add-default-method)
        (add-url mappings statement)
        (add-query-params mappings statement)
@@ -47,5 +52,5 @@
 
 (defn from-statements [mappings statements]
   (if (sequential? (first statements))
-      (map #(from-statements mappings %) statements)
-      (map (partial statement->request mappings) statements)))
+    (map #(from-statements mappings %) statements)
+    (map (partial statement->request mappings) statements)))
