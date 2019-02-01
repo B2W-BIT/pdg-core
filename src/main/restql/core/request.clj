@@ -52,5 +52,5 @@
 
 (defn from-statements [mappings statements]
   (if (sequential? (first statements))
-    (map #(from-statements mappings %) statements)
-    (map (partial statement->request mappings) statements)))
+      (map #(from-statements mappings %) statements)
+      (map (partial statement->request mappings) statements)))
