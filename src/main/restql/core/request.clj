@@ -38,7 +38,8 @@
 
 (defn- add-metadata-from-statement-meta [statement]
   (if-not (empty? (meta statement))
-    (assoc statement :metadata (meta statement))))
+    (assoc statement :metadata (meta statement))
+    statement))
 
 (def params-ignored-from-request [:with])
 
