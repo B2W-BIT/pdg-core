@@ -1,5 +1,6 @@
 (ns restql.core.statement
   (:require [restql.core.util.deep-merge :refer [deep-merge]]
+            [restql.core.statement.explode-list-vals-in-new-maps :refer [explode-list-vals-in-new-maps]]
             [restql.core.util.update-in-seq :refer [update-in-seq]]
             [restql.core.encoders.core :as encoder]
             [restql.core.util.get-in-with-list-support :refer [get-in-with-list-support]]))
@@ -52,15 +53,20 @@
     (do-expand statement)
     (conj [] statement)))
 
-(defn- get-chained-params [statement]
-  (->> (:with statement)
-       (filter (fn [[_ values]] (sequential? values)))
-       (filter (fn [[_ values]] (every? keyword? values)))
-       (into {})))
-
+(defn- get-chained-params [chained]
+  (cond
+    (and (sequential? chained) (every? keyword? chained)) chained
+    (map? chained) (->>
+                    (map (fn [[k v]]
+                           (let [chained-params (get-chained-params v)]
+                             (when chained-params {k chained-params})))
+                         chained)
+                    (into {}))
+    :else nil))
 
 (defn- has-chained-value? [statement]
   (->> statement
+       (:with)
        (get-chained-params)
        (count)
        (not= 0)))
@@ -100,22 +106,31 @@
            (with-meta value (meta chain))
            value))))
 
-(defn assoc-value-to-param [state [param-name chain]]
-  (assoc {} param-name (get-param-value state chain)))
+(defn- assoc-value-to-param [state [param-name chain]]
+  (if (map? chain)
+    (assoc {} param-name (->> chain (map #(assoc-value-to-param state %)) (into {})))
+    (assoc {} param-name (get-param-value state chain))))
 
 (defn- merge-chained-with-state [state params]
   (map (partial assoc-value-to-param state) params))
 
 (defn- merge-params-with-statement [statement params]
-  (->> (assoc {} :with params)
-       (deep-merge statement)))
+  (->>
+   params
+   (map (fn [[k v]] (if (map? v)
+                      [k (explode-list-vals-in-new-maps v)]
+                      [k v])))
+   (into {})
+   (deep-merge statement)))
 
 (defn- do-resolve [statement state]
   (->> statement
+       (:with)
        (get-chained-params)
        (merge-chained-with-state state)
        (into {})
-       (merge-params-with-statement statement)))
+       (merge-params-with-statement (:with statement))
+       (assoc statement :with)))
 
 (defn resolve-chained-values [statement state]
   (if (has-chained-value? statement)
