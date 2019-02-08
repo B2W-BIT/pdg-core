@@ -90,9 +90,9 @@
     (instance? clojure.lang.ExceptionInfo exception) 408
     (instance? aleph.utils.RequestTimeoutException exception) 408
     (instance? aleph.utils.ConnectionTimeoutException exception) 408
-    (instance? aleph.utils.PoolTimeoutException exception) 408
     (instance? aleph.utils.ReadTimeoutException exception) 408
     (instance? aleph.utils.ProxyConnectionTimeoutException exception) 408
+    (instance? aleph.utils.PoolTimeoutException exception) 0
     :else 0))
 
 (defn get-error-message [exception]
