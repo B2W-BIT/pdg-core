@@ -1,17 +1,17 @@
 (ns restql.core.transformations.select
   (:require [restql.core.transformations.filters :as filters]))
 
-(defn select-keyword [select-param entity-value]
+(defn- select-keyword [select-param entity-value]
   (get entity-value select-param))
 
 (declare do-selection)
 
-(defn apply-filters [filter-data entity-value]
+(defn- apply-filters [filter-data entity-value]
   (if (seq filter-data)
     (filters/apply-filters entity-value filter-data)
     entity-value))
 
-(defn select-expression [[select-key & select-params] entity-value]
+(defn- select-expression [[select-key & select-params] entity-value]
   (let [entity-item (get entity-value select-key)
         subselect (->> select-params (filter set?) first)
         filters (filter map? select-params)
@@ -20,12 +20,12 @@
       filtered-items
       (do-selection subselect filtered-items))))
 
-(defn contains-wildcard? [select-params]
+(defn- contains-wildcard? [select-params]
   (if (set? select-params)
     (some #(= :* %) select-params)
     false))
 
-(defn select-single [select-params entity-value]
+(defn- select-single [select-params entity-value]
   (reduce (fn [result select-param]
             (cond
               (= :* select-param) result
@@ -35,27 +35,19 @@
           (if (contains-wildcard? select-params) entity-value {})
           select-params))
 
-(defn do-selection [fields-to-select result]
+(defn- do-selection [fields-to-select result]
   (if (sequential? result)
-    (map #(select-single fields-to-select %) result)
+    (map #(do-selection fields-to-select %) result)
     (select-single fields-to-select result)))
 
+(defn- filter-resource-response [fields-to-select resource-response]
+  (->> resource-response
+       (:result)
+       (do-selection fields-to-select)
+       (assoc {} :result)
+       (merge {:details (:details resource-response)})))
 
-(defn is-multiplexed-request? [resource-response]
-  (sequential? (:details resource-response))
-)
-
-
-(defn filter-resource-response [fields-to-select resource-response]
-  (let [filtered-resource-response {:details (:details resource-response)}]
-    (if (is-multiplexed-request? resource-response)
-      (assoc filtered-resource-response :result (map (partial do-selection fields-to-select) (:result resource-response)))
-      (assoc filtered-resource-response :result (do-selection fields-to-select (:result resource-response)))
-    )
-  )
- )
-
-(defn reduce-with [query]
+(defn- reduce-with [query]
   (fn [acc resource resource-response]
     (let [select-params (:select (resource query))]
       (cond
