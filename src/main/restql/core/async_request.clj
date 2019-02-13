@@ -18,16 +18,18 @@
 
 (def default-values {:pool-connections-per-host 100
                      :pool-total-connections 10000
-                     :pool-max-queue-size 65536})
+                     :pool-max-queue-size 65536
+                     :poll-control-period 60000})
 
 (defn get-default [key]
   (if (contains? env key) (read-string (env key)) (default-values key)))
 
 (defonce client-connection-pool
   (http/connection-pool {:connections-per-host (get-default :pool-connections-per-host)
-                         :total-connections    (get-default :pool-total-connections)
-                         :max-queue-size       (get-default :pool-max-queue-size)
-                         :stats-callback       #(hook/execute-hook :stats-conn-pool (assoc {} :stats %))}))
+                          :total-connections    (get-default :pool-total-connections)
+                          :max-queue-size       (get-default :pool-max-queue-size)
+                          :control-period       (get-default :poll-control-period)
+                          :stats-callback       #(hook/execute-hook :stats-conn-pool (assoc {} :stats %))}))
 
 (defn fmap [f m]
   (reduce-kv #(assoc %1 %2 (f %3)) {} m))
