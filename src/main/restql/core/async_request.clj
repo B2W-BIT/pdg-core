@@ -21,8 +21,9 @@
                      :pool-max-queue-size 65536
                      :poll-control-period 60000})
 
-(defn get-default [key]
-  (if (contains? env key) (read-string (env key)) (default-values key)))
+(defn get-default
+  ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
+  ([key default] (if (contains? env key) (read-string (env key)) default)))
 
 (defonce client-connection-pool
   (http/connection-pool {:connections-per-host (get-default :pool-connections-per-host)
@@ -205,7 +206,7 @@
                           :time               time-before
                           :body               (some-> request :body json/encode)
                           :pool               client-connection-pool
-                          :pool-timeout       request-timeout}
+                          :pool-timeout       (get-default :pool-timeout request-timeout)}
          ; Before Request hook
          before-hook-ctx (hook/execute-hook :before-request request-map)]
      (log/debug request-map "Preparing request")
