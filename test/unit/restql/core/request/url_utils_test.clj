@@ -1,6 +1,6 @@
-(ns restql.core.url-test
+(ns restql.core.request.url-utils-test
   (:require [clojure.test :refer :all])
-  (:use restql.core.url))
+  (:use restql.core.request.url-utils))
 
 (deftest extract-url-parameters-test
   (is (=

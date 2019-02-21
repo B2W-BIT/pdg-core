@@ -1,6 +1,6 @@
 (ns restql.core.validator.core
   (:require [restql.core.validator.util :refer [defrules rule]]
-            [restql.core.context :as ctx]
+            [restql.core.encoders.core :as encoders]
             [clojure.set :as s]
             [restql.core.query :as query])
   (:use [slingshot.slingshot :only [throw+ try+]])
@@ -32,7 +32,7 @@
   (->> a-map keys (filter (complement keyword?)) count (= 0)))
 
 (defn valid-encoders [custom-encoders-map]
-  (let [base-encoders (->> (ctx/get-encoders) keys (into #{}))
+  (let [base-encoders (->> (encoders/get-default-encoders) keys (into #{}))
         custom-encoders (->> custom-encoders-map keys (into #{}))]
     (into base-encoders custom-encoders)))
 

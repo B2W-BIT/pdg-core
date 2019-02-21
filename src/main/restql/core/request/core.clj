@@ -1,19 +1,21 @@
-(ns restql.core.request
-  (:require [restql.core.util.assoc? :refer [assoc?]]
-            [restql.core.url :as url])
-)
+(ns restql.core.request.core
+  (:require [restql.core.request.statement [expand :refer [expand]]
+                                           [resolve-chained-values :refer [resolve-chained-values]]
+                                           [apply-encoders :refer [apply-encoders]]]
+            [restql.core.util.assoc? :refer [assoc?]]
+            [restql.core.request.url-utils :as url-utils]))
 
 (defn- add-default-method [request]
   (conj {:method :get} request)
-)
+  )
 
 (defn- add-url [mappings statement request]
-  (-> (url/from-mappings mappings statement)
-      (url/interpolate (:with statement))
+  (-> (url-utils/from-mappings mappings statement)
+      (url-utils/interpolate (:with statement))
       (as-> url (assoc {} :url url))
       (conj request)
+      )
   )
-)
 
 (defn- is-post-or-put? [statement]
   (or (= :post (:method statement)) (= :put (:method statement))))
@@ -22,8 +24,8 @@
   (-> statement
       (get :with)
       (as-> params (if (is-post-or-put? statement)
-                     (url/filter-explicit-query-params (url/from-mappings mappings statement) params)
-                     (url/dissoc-path-params (url/from-mappings mappings statement) params)))
+                     (url-utils/filter-explicit-query-params (url-utils/from-mappings mappings statement) params)
+                     (url-utils/dissoc-path-params (url-utils/from-mappings mappings statement) params)))
       (as-> params (if-not (empty? params) (assoc? {} :query-params params) {}))
       (conj request)))
 
@@ -31,8 +33,8 @@
   (-> statement
       (get :with)
       (as-> params (if (is-post-or-put? statement)
-                       (url/dissoc-params (url/from-mappings mappings statement) params)
-                       (identity {})))
+                     (url-utils/dissoc-params (url-utils/from-mappings mappings statement) params)
+                     (identity {})))
       (as-> params (if-not (empty? params) (assoc? {} :body params) {}))
       (conj request)))
 
@@ -53,5 +55,11 @@
 
 (defn from-statements [mappings statements]
   (if (sequential? (first statements))
-      (map #(from-statements mappings %) statements)
-      (map (partial statement->request mappings) statements)))
+    (map #(from-statements mappings %) statements)
+    (map (partial statement->request mappings) statements)))
+
+(defn do-request-url [mappings statement state encoders]
+  (->> (resolve-chained-values statement state)
+       (expand)
+       (apply-encoders encoders)
+       (from-statements mappings)))

@@ -1,4 +1,4 @@
-(ns restql.core.statement.explode-list-vals-in-new-maps)
+(ns restql.core.request.statement.explode-list-vals-in-new-maps)
 
 (defn- should-expand? [v]
   (not (false? (:expand (meta v)))))

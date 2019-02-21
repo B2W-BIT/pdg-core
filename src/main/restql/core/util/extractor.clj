@@ -1,4 +1,4 @@
-(ns restql.core.extractor)
+(ns restql.core.util.extractor)
 
 (defn traverse [data [map-key & path]]
   (if map-key

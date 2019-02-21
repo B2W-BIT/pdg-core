@@ -1,24 +1,19 @@
-(ns restql.core.async-runner
+(ns restql.core.runner.core
   (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout]]
-            [restql.core.query :as query]
             [clojure.tools.logging :as log]
-            [clojure.set :as s]))
+            [clojure.set :as s]
+            [restql.core.query :as query]
+            [restql.core.runner.executor :as executor]))
 
-(defn generate-uuid! []
+(defn- generate-uuid! []
   (.toString (java.util.UUID/randomUUID)))
 
-(defn initialize-state [query]
+(defn- initialize-state [query]
   {:done []
    :requested []
    :to-do query})
 
-(defn all-done?
-  "given a state with queries :done :requested and :to-do returns
-   true if all entries are :done"
-  [state]
-  (and (empty? (:to-do state)) (empty? (:requested state))))
-
-(defn can-request?
+(defn- can-request?
   "given a single query item and the map with the current results
    returns true if all the dependencies of the query-item are
    resolved"
@@ -27,7 +22,7 @@
         dones (->> state :done (map first) (into #{}))]
     (empty? (s/difference deps dones))))
 
-(defn all-that-can-request
+(defn- all-that-can-request
   "takes a state with queries :done :requested and :to-do and returns
    a sequence of pairs with only the queries that can be executed, because all
    their dependencies are already met.
@@ -36,7 +31,7 @@
   [state]
   (filter #(can-request? % state) (:to-do state)))
 
-(defn is-done? [[query-item-key _] state]
+(defn- is-done? [[query-item-key _] state]
   (->> state
       :done
       (map first)
@@ -45,7 +40,7 @@
       nil?
       not))
 
-(defn update-state
+(defn- update-state
   "it passes all to-do queries that could be requested to :requested state and
    adds a completed request to the :done state"
   [state completed]
@@ -55,7 +50,7 @@
                    (into (:requested state) (all-that-can-request state)))
    :to-do (filter #(not (can-request? % state)) (:to-do state))})
 
-(defn get-status-log [uid resource result]
+(defn- get-status-log [uid resource result]
   "get log message depending on the status code of result"
   (let [status (-> result second :status)]
     (cond
@@ -63,13 +58,13 @@
       (nil? status)  (log/warn {:session uid :resource resource} "Request aborted")
       :else          :no-action)))
 
-(defn log-status [uid resource result]
+(defn- log-status [uid resource result]
   "in case of result being a list, for multiplexed calls"
   (if (sequential? result)
     (map #(get-status-log uid resource %) result)
     (get-status-log uid resource result)))
 
-(defn make-requests
+(defn- make-requests
   "goroutine that keeps listening from request-ch and performs http requests
    sending their result to result-ch"
   [do-request encoders {:keys [request-ch result-ch exception-ch]} {:keys [_debugging] :as query-opts}]
@@ -92,7 +87,7 @@
               (>! result-ch result)))))
     (recur (<! request-ch) (timeout (:global-timeout query-opts)) (generate-uuid!) )))
 
-(defn do-run
+(defn- do-run
   "it separates all queries in three states, :done :requested and :to-do
    then sends all to-dos to resolve, changing their statuses to :requested.
    As the results get ready, update the query status to :done and send all to-dos again.
@@ -106,12 +101,12 @@
       (go (>! output-ch new-state))
       (recur new-state))))
 
-(defn run [do-request query encoders {:keys [_debugging] :as query-opts}]
+(defn run [mappings query encoders {:keys [_debugging] :as query-opts}]
   (let [chans {:output-ch    (chan)
                :request-ch   (chan)
                :result-ch    (chan)
                :exception-ch (chan)}]
-    (make-requests do-request encoders chans query-opts)
+    (make-requests (partial executor/do-request mappings) encoders chans query-opts)
     (do-run query chans)
     [(:output-ch chans)
      (:exception-ch chans)]))

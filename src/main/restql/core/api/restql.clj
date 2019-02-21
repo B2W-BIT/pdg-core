@@ -1,16 +1,21 @@
 (ns restql.core.api.restql
-  (:require [restql.core.async-runner :as restql]
+  (:require [restql.core.runner.core :as runner]
             [restql.core.validator.core :as validator]
             [restql.core.transformations.select :refer [select]]
             [restql.core.transformations.aggregation :as aggregation]
-            [restql.core.async-request :as request]
             [restql.hooks.core :as hook]
             [restql.core.api.response-builder :as response-builder]
-            [restql.core.context :as context]
+            [restql.core.encoders.core :as encoders]
             [restql.parser.core :as parser]
             [clojure.walk :refer [stringify-keys]]
             [clojure.core.async :refer [go go-loop <!! <! >! alt! alts! timeout]]
             [environ.core :refer [env]]))
+
+(defn- all-done?
+  "given a state with queries :done :requested and :to-do returns
+   true if all entries are :done"
+  [state]
+  (and (empty? (:to-do state)) (empty? (:requested state))))
 
 (def default-values {:query-resource-timeout 5000
                      :query-global-timeout 30000})
@@ -20,7 +25,7 @@
 
 (defn- wait-until-finished [output-ch query-opts]
   (go-loop [state (<! output-ch)]
-    (if (restql/all-done? state)
+    (if (all-done? state)
       (response-builder/build (reduce (fn [res [key value]]
                                           (assoc res key value)) {} (:done state)) query-opts)
       (recur (<! output-ch)))))
@@ -42,7 +47,7 @@
                    output)))))
 
 (defn get-default-encoders []
-  (context/get-encoders))
+  (encoders/get-default-encoders))
 
 (defn- set-default-query-options [query-options]
   (into {:timeout        (get-default :query-resource-timeout)
@@ -55,10 +60,9 @@
         time-before (System/currentTimeMillis)
 
         ; Executing query
-        do-request (partial request/do-request mappings)
         query-opts (set-default-query-options query-opts)
         parsed-query (parse-query {:mappings mappings :encoders encoders} query)
-        [output-ch exception-ch] (restql/run do-request parsed-query encoders query-opts)
+        [output-ch exception-ch] (runner/run mappings parsed-query encoders query-opts)
         result-ch (wait-until-finished output-ch query-opts)
         parsed-ch (extract-result parsed-query (timeout (:global-timeout query-opts)) exception-ch result-ch)
         return-ch (go

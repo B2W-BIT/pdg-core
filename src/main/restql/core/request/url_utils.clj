@@ -1,6 +1,5 @@
-(ns restql.core.url
+(ns restql.core.request.url-utils
   (:require [clojure.string :as str]
-            [clojure.set :as set]
             [ring.util.codec :refer [url-encode]]))
 
 (defn- filter-variables [items]
@@ -61,7 +60,7 @@
                  (dissoc result param-key))
                params)))
 
-(defn dissoc-query-params
+(defn- dissoc-query-params
   "removes all keys of the map that appear as a parameter of
   the url"
   [url params]

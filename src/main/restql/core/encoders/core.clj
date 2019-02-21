@@ -35,3 +35,6 @@
   (-> base-encoders
       (merge encoders)
       (perfom-encoding data)))
+
+(defn get-default-encoders []
+  base-encoders)

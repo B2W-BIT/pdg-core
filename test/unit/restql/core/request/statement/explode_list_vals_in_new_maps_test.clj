@@ -1,6 +1,6 @@
-(ns restql.core.statement.explode-list-vals-in-new-maps-test
+(ns restql.core.request.statement.explode-list-vals-in-new-maps-test
   (:require [clojure.test :refer [deftest is]])
-  (:use restql.core.statement.explode-list-vals-in-new-maps))
+  (:use restql.core.request.statement.explode-list-vals-in-new-maps))
 
 (deftest explode-list-vals-in-new-maps-test
   (is (= {:ids 1 :type 3}

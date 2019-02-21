@@ -1,8 +1,10 @@
-(ns restql.core.async-runner-test
+(ns restql.core.runner.core-test
   (:require [clojure.core.async :refer [<!! >! chan go]]
-            [clojure.test :refer [deftest is]])
-  (:use restql.core.async-runner))
+            [clojure.test :refer [deftest is]]))
 
+(def is-done? #'restql.core.runner.core/is-done?)
+(def can-request? #'restql.core.runner.core/can-request?)
+(def all-that-can-request #'restql.core.runner.core/all-that-can-request)
 
 (deftest is-done?-test
   (is (=

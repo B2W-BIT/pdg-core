@@ -1,6 +1,6 @@
-(ns restql.core.extractor-test
+(ns restql.core.util.extractor-test
   (:require [clojure.test :refer [deftest is]])
-  (:use restql.core.extractor))
+  (:use restql.core.util.extractor))
 
 (deftest simple-traverse-test
   (is (=

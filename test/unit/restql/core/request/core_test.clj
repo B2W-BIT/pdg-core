@@ -1,6 +1,6 @@
-(ns restql.core.request-test
+(ns restql.core.request.core-test
   (:require [clojure.test :refer :all]
-            [restql.core.request :as request])
+            [restql.core.request.core :as request])
 )
 
 (deftest from-statements-test

@@ -1,19 +1,18 @@
-(ns restql.core.async-request
+(ns restql.core.runner.executor
   (:use [slingshot.slingshot :only [throw+]])
   (:require [clojure.core.async :refer [chan go go-loop >! <!]]
             [aleph.http :as http]
             [manifold.deferred :as d]
-            [restql.core.query :as query]
-            [restql.core.request :as request]
-            [restql.core.statement :as statement]
-            [restql.hooks.core :as hook]
-            [restql.core.extractor :refer [traverse]]
-            [restql.core.util.deep-merge :refer [deep-merge]]
             [clojure.tools.logging :as log]
-            [slingshot.slingshot :refer [try+]]
+            [slingshot.slingshot :refer [try+ throw+]]
             [cheshire.core :as json]
             [environ.core :refer [env]]
-            [clojure.walk :refer [stringify-keys keywordize-keys]])
+            [clojure.walk :refer [stringify-keys keywordize-keys]]
+            [restql.core.query :as query]
+            [restql.core.request.core :as request]
+            [restql.hooks.core :as hook]
+            [restql.core.util.extractor :refer [traverse]]
+            [restql.core.util.deep-merge :refer [deep-merge]])
     (:import [java.net URLDecoder]))
 
 (def default-values {:pool-connections-per-host 100
@@ -21,7 +20,7 @@
                      :pool-max-queue-size 65536
                      :pool-control-period 60000})
 
-(defn get-default
+(defn- get-default
   ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
   ([key default] (if (contains? env key) (read-string (env key)) default)))
 
@@ -32,16 +31,16 @@
                           :control-period       (get-default :pool-control-period)
                           :stats-callback       #(hook/execute-hook :stats-conn-pool (assoc {} :stats %))}))
 
-(defn fmap [f m]
+(defn- fmap [f m]
   (reduce-kv #(assoc %1 %2 (f %3)) {} m))
 
-(defn decode-url [string]
+(defn- decode-url [string]
   (try
     (URLDecoder/decode string "utf-8")
     (catch Exception e
       string)))
 
-(defn parse-query-params
+(defn- parse-query-params
   "this function takes a request object (with :url and :query-params)
   and transforms query params that are sets into vectors"
   [request]
@@ -67,7 +66,7 @@
        (filter (fn [[_ v]] (some? v)))
        (into {})))
 
-(defn convert-response [{:keys [status body headers]} {:keys [debugging metadata time url params timeout resource]}]
+(defn- convert-response [{:keys [status body headers]} {:keys [debugging metadata time url params timeout resource]}]
   (let [parsed (if (string? body) body (slurp body))
         base {:status        status
               :headers       headers
@@ -87,7 +86,7 @@
           :parse-error true
           :body parsed)))))
 
-(defn get-error-status [exception]
+(defn- get-error-status [exception]
   (cond
     (instance? java.lang.IllegalArgumentException exception) 400
     (instance? clojure.lang.ExceptionInfo exception) 408
@@ -98,7 +97,7 @@
     (instance? aleph.utils.PoolTimeoutException exception) 0
     :else 0))
 
-(defn get-error-message [exception]
+(defn- get-error-message [exception]
   (cond
     (instance? clojure.lang.ExceptionInfo exception) (str "Error: " (.getMessage exception))
     (instance? java.lang.IllegalArgumentException exception) (str "Error: "(.getMessage exception))
@@ -109,14 +108,12 @@
     (instance? aleph.utils.ProxyConnectionTimeoutException exception) "ProxyConnectionTimeoutException"
     :else "Internal error"))
 
-(defn get-after-ctx [{:keys [ctx status response-time request result]}]
+(defn- get-after-ctx [{:keys [ctx status response-time request result]}]
   (merge {} ctx request result {:status status
                                 :response-time response-time})
 )
 
-
-
-(defn request-respond-callback [result & {:keys [request
+(defn- request-respond-callback [result & {:keys [request
                                                  request-timeout
                                                  time-before
                                                  query-opts
@@ -145,7 +142,7 @@
             ; Send response to channel
             (go (>! output-ch response)))))
 
-(defn request-error-callback [exception & {:keys [request
+(defn- request-error-callback [exception & {:keys [request
                                                   request-timeout
                                                   time-before
                                                   query-opts
@@ -182,10 +179,10 @@
                                                                       :result error-data}))]
               (log/warn error-data "Request failed")
               ; Send error response to channel
-              (go (>! output-ch (merge (select-keys error-data [:success :status :metadata :url :params :timeout :response-time]) 
+              (go (>! output-ch (merge (select-keys error-data [:success :status :metadata :url :params :timeout :response-time])
                                        {:body {:message (get-error-message exception)}})))))))
 
-(defn make-request
+(defn- make-request
   ([request query-opts]
    (let [output-ch (chan)]
      (make-request request query-opts output-ch)
@@ -227,7 +224,7 @@
                                                      :before-hook-ctx before-hook-ctx))
          (d/success! 1)))))
 
-(defn query-and-join [requests query-opts]
+(defn- query-and-join [requests query-opts]
   (let [perform-func (fn [func requests query-opts]
                         (go-loop [[ch & others] (map #(func % query-opts) requests)
                                   result []]
@@ -238,11 +235,11 @@
       (sequential? (first requests))(perform-func query-and-join requests query-opts)
       :else (perform-func make-request requests query-opts))))
 
-(defn vector-with-nils? [v]
+(defn- vector-with-nils? [v]
   (and (seq? v)
        (some nil? v)))
 
-(defn failure? [requests]
+(defn- failure? [requests]
   (or (nil? requests) (vector-with-nils? requests)))
 
 (defn- single-request-not-multiplexed? [requests]
@@ -251,7 +248,7 @@
     (not (sequential? (first requests)))
     (not (:multiplexed (first requests)))))
 
-(defn perform-request [result-ch query-opts requests]
+(defn- perform-request [result-ch query-opts requests]
   (cond
     (failure? requests)
       (go (>! result-ch {:status nil :body nil}))
@@ -262,14 +259,11 @@
                 (<! )
                 (>! result-ch)))))
 
-(defn do-request-url [mappings statement state encoders result-ch query-opts]
-  (->> (statement/resolve-chained-values statement state)
-       (statement/expand)
-       (statement/apply-encoders encoders)
-       (request/from-statements mappings)
+(defn- do-request-url [mappings statement state encoders result-ch query-opts]
+  (->> (request/do-request-url mappings statement state encoders)
        (perform-request result-ch query-opts)))
 
-(defn do-request-data [{[entity & path] :from} state result-ch]
+(defn- do-request-data [{[entity & path] :from} state result-ch]
   (go (>! result-ch (-> (query/find-query-item entity (:done state))
                         second
                         (update-in [:body] #(traverse % path))))))
