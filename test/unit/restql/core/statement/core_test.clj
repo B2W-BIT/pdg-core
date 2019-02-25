@@ -1,6 +1,6 @@
-(ns restql.core.request.core-test
+(ns restql.core.statement.core-test
   (:require [clojure.test :refer :all]
-            [restql.core.request.core :as request])
+            [restql.core.statement.core :as statement])
 )
 
 (deftest from-statements-test
@@ -9,7 +9,7 @@
      (= [{:from   :resource-name
           :url    "http://resource-url"
           :method :get}]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [{:from :resource-name}]))))
 
   (testing "Returns a request config from a statement with a list of statement"
@@ -22,7 +22,7 @@
            :url    "http://resource-url"
            :method :get
            :query-params {:id 2}}]]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [[{:from :resource-name, :with {:id 1}, :method :get}
                                    {:from :resource-name, :with {:id 2}, :method :get}]]))))
 
@@ -32,7 +32,7 @@
           :url     "http://resource-url"
           :method  :post
           :headers {:content-type "application/json"}}]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [{:from    :resource-name
                                    :method  :post
                                    :headers {:content-type "application/json"}}]))))
@@ -47,7 +47,7 @@
           :url          "http://resource-url"
           :method       :get
           :query-params {:id 2}}]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [{:from :resource-name
                                    :with {:id 1}
                                    :method :get}
@@ -61,7 +61,7 @@
           :url          "http://resource-url"
           :method       :get
           :query-params {:id 1 :name "clojurist"}}]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [{:from :resource-name
                                    :with {:id 1 :name "clojurist"}
                                    :method :get}]))))
@@ -72,7 +72,7 @@
           :url          "http://resource-url"
           :method       :get
           :query-params {:id [1, 2]}}]
-        (request/from-statements {:resource-name "http://resource-url"}
+        (statement/from-statements {:resource-name "http://resource-url"}
                                  [{:from :resource-name
                                    :with {:id [1, 2]}
                                    :method :get}]))))
@@ -82,7 +82,7 @@
      (= [{:from   :resource-name
           :url    "http://resource-url/1"
           :method :get}]
-        (request/from-statements {:resource-name "http://resource-url/:id"}
+        (statement/from-statements {:resource-name "http://resource-url/:id"}
                                  [{:from :resource-name
                                    :with {:id 1}}]))))
 
@@ -92,7 +92,7 @@
           :url          "http://resource-url/clojurist"
           :method       :get
           :query-params {:id [1 2]}}]
-        (request/from-statements {:resource-name "http://resource-url/:name"}
+        (statement/from-statements {:resource-name "http://resource-url/:name"}
                                  [{:from :resource-name
                                    :with {:id [1 2] :name "clojurist"}}]))))
 
@@ -105,7 +105,7 @@
           :body         {:id 1}
           :timeout      1000
           :headers      {:content-type "application/json"}}]
-        (request/from-statements {:resource-name "http://resource-url/:name"}
+        (statement/from-statements {:resource-name "http://resource-url/:name"}
                                  [{:from :resource-name
                                    :method :post
                                    :with {:id 1 :name "param-name"}
@@ -121,7 +121,7 @@
           :body         {:active true}
           :timeout      1000
           :headers      {:content-type "application/json"}}]
-        (request/from-statements {:resource-name "http://resource-url/:name?:id"}
+        (statement/from-statements {:resource-name "http://resource-url/:name?:id"}
                                  [{:from :resource-name
                                    :method :post
                                    :with {:id 1 :name "param-name" :active true}

@@ -9,7 +9,7 @@
             [environ.core :refer [env]]
             [clojure.walk :refer [stringify-keys keywordize-keys]]
             [restql.core.query :as query]
-            [restql.core.request.core :as request]
+            [restql.core.statement.core :as statement]
             [restql.hooks.core :as hook]
             [restql.core.util.extractor :refer [traverse]]
             [restql.core.util.deep-merge :refer [deep-merge]])
@@ -182,6 +182,21 @@
               (go (>! output-ch (merge (select-keys error-data [:success :status :metadata :url :params :timeout :response-time])
                                        {:body {:message (get-error-message exception)}})))))))
 
+(defn- build-request-map [request request-timeout valid-query-params time body-encoded poll-timeout]
+  {:url                (:url request)
+   :request-method     (:method request)
+   :content-type       "application/json"
+   :resource           (:from request)
+   :connection-timeout request-timeout
+   :request-timeout    request-timeout
+   :read-timeout       request-timeout
+   :query-params       valid-query-params
+   :headers            (:with-headers request)
+   :time               time
+   :body               body-encoded
+   :pool               client-connection-pool
+   :pool-timeout       poll-timeout})
+
 (defn- make-request
   ([request query-opts]
    (let [output-ch (chan)]
@@ -191,19 +206,12 @@
    (let [request         (parse-query-params request)
          time-before     (System/currentTimeMillis)
          request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
-         request-map     {:url                (:url request)
-                          :request-method     (:method request)
-                          :content-type       "application/json"
-                          :resource           (:from request)
-                          :connection-timeout request-timeout
-                          :request-timeout    request-timeout
-                          :read-timeout       request-timeout
-                          :query-params       (valid-query-params request query-opts)
-                          :headers            (:with-headers request)
-                          :time               time-before
-                          :body               (some-> request :body json/encode)
-                          :pool               client-connection-pool
-                          :pool-timeout       (get-default :pool-timeout request-timeout)}
+         request-map (build-request-map
+                       request request-timeout
+                       (valid-query-params request query-opts)
+                       time-before
+                       (some-> request :body json/encode)
+                       (get-default :pool-timeout request-timeout))
          ; Before Request hook
          before-hook-ctx (hook/execute-hook :before-request request-map)]
      (log/debug request-map "Preparing request")
@@ -260,7 +268,7 @@
                 (>! result-ch)))))
 
 (defn- do-request-url [mappings statement state encoders result-ch query-opts]
-  (->> (request/do-request-url mappings statement state encoders)
+  (->> (statement/build mappings statement state encoders)
        (perform-request result-ch query-opts)))
 
 (defn- do-request-data [{[entity & path] :from} state result-ch]

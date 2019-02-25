@@ -1,4 +1,4 @@
-(ns restql.core.request.statement.apply-encoders
+(ns restql.core.statement.apply-encoders
   (:require [restql.core.util.deep-merge :refer [deep-merge]]
             [restql.core.encoders.core :as encoder]))
 

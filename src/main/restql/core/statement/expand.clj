@@ -1,4 +1,4 @@
-(ns restql.core.request.statement.expand
+(ns restql.core.statement.expand
   (:require [restql.core.util.update-in-seq :refer [update-in-seq]]))
 
 (defn- filter-params-with-list-value [params]

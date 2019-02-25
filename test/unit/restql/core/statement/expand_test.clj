@@ -1,6 +1,6 @@
-(ns restql.core.request.statement.expand-test
+(ns restql.core.statement.expand-test
   (:require [clojure.test :refer :all]
-            [restql.core.request.statement.expand :refer [expand]]))
+            [restql.core.statement.expand :refer [expand]]))
 
 (deftest expand-test
   (testing "Do nothing if theres no with"

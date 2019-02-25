@@ -1,5 +1,5 @@
-(ns restql.core.request.statement.resolve-chained-values
-  (:require [restql.core.request.statement.explode-list-vals-in-new-maps :refer [explode-list-vals-in-new-maps]]
+(ns restql.core.statement.resolve-chained-values
+  (:require [restql.core.statement.explode-list-vals-in-new-maps :refer [explode-list-vals-in-new-maps]]
             [restql.core.util.deep-merge :refer [deep-merge]]
             [restql.core.util.get-in-with-list-support :refer [get-in-with-list-support]]))
 

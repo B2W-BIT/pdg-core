@@ -1,4 +1,4 @@
-(ns restql.core.request.url-utils
+(ns restql.core.statement.url-utils
   (:require [clojure.string :as str]
             [ring.util.codec :refer [url-encode]]))
 

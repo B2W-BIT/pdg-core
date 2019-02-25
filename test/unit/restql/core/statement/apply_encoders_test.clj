@@ -1,6 +1,6 @@
-(ns restql.core.request.statement.apply-encoders-test
+(ns restql.core.statement.apply-encoders-test
   (:require [clojure.test :refer :all]
-            [restql.core.request.statement.apply-encoders :refer [apply-encoders]]))
+            [restql.core.statement.apply-encoders :refer [apply-encoders]]))
 
 (deftest apply-encoders-test
   (testing "Resolve without encoder on single return value"

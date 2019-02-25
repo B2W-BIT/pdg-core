@@ -1,21 +1,18 @@
-(ns restql.core.request.core
-  (:require [restql.core.request.statement [expand :refer [expand]]
-                                           [resolve-chained-values :refer [resolve-chained-values]]
-                                           [apply-encoders :refer [apply-encoders]]]
+(ns restql.core.statement.core
+  (:require [restql.core.statement [expand :refer [expand]]
+             [resolve-chained-values :refer [resolve-chained-values]]
+             [apply-encoders :refer [apply-encoders]]]
             [restql.core.util.assoc? :refer [assoc?]]
-            [restql.core.request.url-utils :as url-utils]))
+            [restql.core.statement.url-utils :as url-utils]))
 
 (defn- add-default-method [request]
-  (conj {:method :get} request)
-  )
+  (conj {:method :get} request))
 
 (defn- add-url [mappings statement request]
   (-> (url-utils/from-mappings mappings statement)
       (url-utils/interpolate (:with statement))
       (as-> url (assoc {} :url url))
-      (conj request)
-      )
-  )
+      (conj request)))
 
 (defn- is-post-or-put? [statement]
   (or (= :post (:method statement)) (= :put (:method statement))))
@@ -58,7 +55,7 @@
     (map #(from-statements mappings %) statements)
     (map (partial statement->request mappings) statements)))
 
-(defn do-request-url [mappings statement state encoders]
+(defn build [mappings statement state encoders]
   (->> (resolve-chained-values statement state)
        (expand)
        (apply-encoders encoders)

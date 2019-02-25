@@ -1,6 +1,6 @@
-(ns restql.core.request.statement.resolve-chained-values-test
+(ns restql.core.statement.resolve-chained-values-test
   (:require [clojure.test :refer :all]
-            [restql.core.request.statement.resolve-chained-values :refer [resolve-chained-values]]))
+            [restql.core.statement.resolve-chained-values :refer [resolve-chained-values]]))
 
 (deftest resolve-chained-values-test
   (testing "Do nothing if theres no with chained"
