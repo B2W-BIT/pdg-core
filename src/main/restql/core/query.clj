@@ -3,17 +3,17 @@
 (declare extract-complex-dependencies)
 (declare extract-dependencies)
 
-(defn extract-complex-dependencies [structure]
+(defn- extract-complex-dependencies [structure]
   (let [values (vals structure)
         deps   (map extract-dependencies values)]
     (reduce into #{} deps)))
 
-(defn vector-of-keywords? [value]
+(defn- vector-of-keywords? [value]
   (and
-    (vector? value)
-    (every? keyword? value)))
+   (vector? value)
+   (every? keyword? value)))
 
-(defn extract-dependencies [value]
+(defn- extract-dependencies [value]
   (cond
     (vector-of-keywords? value) #{value}
     (map? value) (extract-complex-dependencies value)
@@ -37,9 +37,3 @@
   [[_query-item-name query-item-data]]
   (let [deps (get-dependency-paths query-item-data)]
     (->> deps (map first) (into #{}))))
-
-(defn find-query-item
-  "given a query-item-name (a keyword) returns the query-item (a pair with keyword and data)
-   from state. State is a vector of pairs."
-  [query-item-name state]
-  (first (filter (fn [[k _]] (= query-item-name k)) state)))

@@ -1,9 +1,12 @@
 (ns restql.core.runner.core
-  (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout]]
+  (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout close!]]
             [clojure.tools.logging :as log]
             [clojure.set :as s]
             [restql.core.query :as query]
             [restql.core.runner.executor :as executor]))
+
+(defn- all-done? [state]
+  (and (empty? (:to-do state)) (empty? (:requested state))))
 
 (defn- can-request?
   "given a single query item and the map with the current results
@@ -47,14 +50,17 @@
    then sends all to-dos to resolve, changing their statuses to :requested.
    As the results get ready, update the query status to :done and send all to-dos again.
    When all queries are :done, the process is complete, and the :done part of the state is returned."
-  [query {:keys [request-ch result-ch output-ch]}]
+  [query {:keys [request-ch result-ch]}]
   (go-loop [state {:done [] :requested [] :to-do query}]
     (doseq [to-do (all-that-can-request state)]
       (go
         (>! request-ch {:to-do to-do :state state})))
     (let [new-state (update-state state (<! result-ch))]
-      (go (>! output-ch new-state))
-      (recur new-state))))
+      (if (all-done? new-state)
+        (do
+          (close! request-ch)
+          (:done new-state))
+        (recur new-state)))))
 
 ; ######################################; ######################################
 
@@ -80,32 +86,21 @@
    sending their result to result-ch"
   [do-request encoders {:keys [request-ch result-ch exception-ch]} query-opts]
   (go-loop [next-req (<! request-ch)
-            timeout-ch (timeout (:global-timeout query-opts))
-            uid  (generate-uuid!)]
-    (let [from (:from (second (second (first next-req))))]
-      (go
-        (alt!
-          timeout-ch
-          ([]
-           (log/warn {:session uid :resource from} "Request timed out")
-           (>! result-ch [(first (second (first next-req))) {:status 408 :body {:message "timeout"}}]))
-
-          (do-request next-req encoders exception-ch query-opts)
-          ([result]
-           (log-status uid from result)
-           (>! result-ch result)))))
-    (recur (<! request-ch)
-           (timeout (:global-timeout query-opts))
-           (generate-uuid!))))
+            uuid  (generate-uuid!)]
+    (go (let [result (<! (do-request next-req encoders exception-ch query-opts))]
+          (log-status uuid (:from (second (second (first next-req)))) result)
+          (>! result-ch result)))
+    (if-let [request (<! request-ch)]
+      (recur request
+             uuid)
+      (close! result-ch))))
 
 ; ######################################; ######################################
 
 (defn run [mappings query encoders {:keys [_debugging] :as query-opts}]
-  (let [chans {:output-ch    (chan)
-               :request-ch   (chan)
+  (let [chans {:request-ch   (chan)
                :result-ch    (chan)
                :exception-ch (chan)}]
     (make-requests (partial executor/do-request mappings) encoders chans query-opts)
-    (do-run query chans)
-    [(:output-ch chans)
+    [(do-run query chans)
      (:exception-ch chans)]))
