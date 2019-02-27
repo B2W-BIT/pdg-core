@@ -189,21 +189,17 @@
    :pool               client-connection-pool
    :pool-timeout       poll-timeout})
 
-(defn make-request
-  ([request query-opts]
-   (let [output-ch (chan)]
-     (make-request request query-opts output-ch)
-     output-ch))
-  ([request query-opts output-ch]
-   (let [request         (parse-query-params request)
+(defn make-request [request query-opts]
+   (let [output-ch       (chan)
+         request         (parse-query-params request)
          time-before     (System/currentTimeMillis)
          request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
          request-map (build-request-map
-                       request request-timeout
-                       (valid-query-params request query-opts)
-                       time-before
-                       (some-> request :body json/encode)
-                       (get-default :pool-timeout request-timeout))
+                      request request-timeout
+                      (valid-query-params request query-opts)
+                      time-before
+                      (some-> request :body json/encode)
+                      (get-default :pool-timeout request-timeout))
          ; Before Request hook
          before-hook-ctx (hook/execute-hook :before-request request-map)]
      (log/debug request-map "Preparing request")
@@ -222,4 +218,5 @@
                                                      :time-before time-before
                                                      :output-ch output-ch
                                                      :before-hook-ctx before-hook-ctx))
-         (d/success! 1)))))
+         (d/success! 1))
+     output-ch))

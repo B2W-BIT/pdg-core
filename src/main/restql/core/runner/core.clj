@@ -3,7 +3,8 @@
             [clojure.tools.logging :as log]
             [clojure.set :as s]
             [restql.core.query :as query]
-            [restql.core.runner.executor :as executor]))
+            [restql.core.runner.executor :as executor]
+            [restql.core.statement.core :as statement]))
 
 (defn- all-done? [state]
   (and (empty? (:to-do state)) (empty? (:requested state))))
@@ -81,18 +82,26 @@
 (defn- generate-uuid! []
   (.toString (java.util.UUID/randomUUID)))
 
+(defn- build-and-execute [mappings encoders {:keys [to-do state]} exception-ch query-opts uuid result-ch]
+  (go
+    (let [[query-name statement] to-do
+            from (:from (second statement))
+            result (->
+                      (statement/build mappings statement (:done state) encoders)
+                      (executor/do-request exception-ch query-opts)
+                      (<!))]
+    (log-status uuid from result)
+    (>! result-ch (vector query-name result)))))
+
 (defn- make-requests
   "goroutine that keeps listening from request-ch and performs http requests
    sending their result to result-ch"
-  [do-request encoders {:keys [request-ch result-ch exception-ch]} query-opts]
+  [mappings encoders {:keys [request-ch result-ch exception-ch]} query-opts]
   (go-loop [next-req (<! request-ch)
             uuid  (generate-uuid!)]
-    (go (let [result (<! (do-request next-req encoders exception-ch query-opts))]
-          (log-status uuid (:from (second (second (first next-req)))) result)
-          (>! result-ch result)))
+    (build-and-execute mappings encoders next-req exception-ch query-opts uuid result-ch)
     (if-let [request (<! request-ch)]
-      (recur request
-             uuid)
+      (recur request uuid)
       (close! result-ch))))
 
 ; ######################################; ######################################
@@ -101,6 +110,6 @@
   (let [chans {:request-ch   (chan)
                :result-ch    (chan)
                :exception-ch (chan)}]
-    (make-requests (partial executor/do-request mappings) encoders chans query-opts)
+    (make-requests mappings encoders chans query-opts)
     [(do-run query chans)
      (:exception-ch chans)]))

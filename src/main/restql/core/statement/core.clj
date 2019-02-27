@@ -55,8 +55,8 @@
     (map #(from-statements mappings %) statements)
     (map (partial statement->request mappings) statements)))
 
-(defn build [mappings statement state encoders]
-  (->> (resolve-chained-values statement state)
+(defn build [mappings statement done-requests encoders]
+  (->> (resolve-chained-values statement done-requests)
        (expand)
        (apply-encoders encoders)
        (from-statements mappings)))

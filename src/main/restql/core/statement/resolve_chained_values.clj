@@ -32,9 +32,8 @@
     (->> resource (map #(get-value-from-resource-list path %)) (vec))
     (get-value-from-path path resource)))
 
-(defn- get-chain-value-from-done-state [[resource-name & path] state]
-  (let [resource (->> state
-                      :done
+(defn- get-chain-value-from-done-requests [[resource-name & path] done-requests]
+  (let [resource (->> done-requests
                       (filter (fn [[key _]] (= key resource-name)))
                       first
                       second)]
@@ -48,21 +47,21 @@
 (defn- has-meta? [object]
   (some? (meta object)))
 
-(defn- get-param-value [state chain]
+(defn- get-param-value [done-requests chain]
   (->
-    (get-chain-value-from-done-state chain state)
+    (get-chain-value-from-done-requests chain done-requests)
     (as-> value
           (if (and (has-meta? chain) (meta-available? value))
             (with-meta value (meta chain))
             value))))
 
-(defn- assoc-value-to-param [state [param-name chain]]
+(defn- assoc-value-to-param [done-requests [param-name chain]]
   (if (map? chain)
-    (assoc {} param-name (->> chain (map #(assoc-value-to-param state %)) (into {})))
-    (assoc {} param-name (get-param-value state chain))))
+    (assoc {} param-name (->> chain (map #(assoc-value-to-param done-requests %)) (into {})))
+    (assoc {} param-name (get-param-value done-requests chain))))
 
-(defn- merge-chained-with-state [state params]
-  (map (partial assoc-value-to-param state) params))
+(defn- merge-chained-with-done-requests [done-requests params]
+  (map (partial assoc-value-to-param done-requests) params))
 
 (defn- merge-params-with-statement [statement params]
   (->>
@@ -73,16 +72,16 @@
     (into {})
     (deep-merge statement)))
 
-(defn- do-resolve [statement state]
+(defn- do-resolve [statement done-requests]
   (->> statement
        (:with)
        (get-chained-params)
-       (merge-chained-with-state state)
+       (merge-chained-with-done-requests done-requests)
        (into {})
        (merge-params-with-statement (:with statement))
        (assoc statement :with)))
 
-(defn resolve-chained-values [statement state]
+(defn resolve-chained-values [statement done-requests]
   (if (has-chained-value? statement)
-    (do-resolve statement state)
+    (do-resolve statement done-requests)
     statement))
