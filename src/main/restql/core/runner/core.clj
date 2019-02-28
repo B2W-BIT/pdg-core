@@ -65,19 +65,18 @@
 
 ; ######################################; ######################################
 
-(defn- get-status-log [uid resource result]
-  "get log message depending on the status code of result"
-  (let [status (-> result second :status)]
+(defn- log-if-408-or-aborted [result uid resource ]
+  (let [status (:status result)]
     (cond
       (= status 408) (log/warn {:session uid :resource resource} "Request timed out")
       (nil? status)  (log/warn {:session uid :resource resource} "Request aborted")
       :else          :no-action)))
 
-(defn- log-status [uid resource result]
+(defn- log-status [result uid resource ]
   "in case of result being a list, for multiplexed calls"
   (if (sequential? result)
-    (map #(get-status-log uid resource %) result)
-    (get-status-log uid resource result)))
+    (doall (map #(log-if-408-or-aborted % uid resource) (flatten result)))
+    (log-if-408-or-aborted result uid resource)))
 
 (defn- generate-uuid! []
   (.toString (java.util.UUID/randomUUID)))
@@ -90,7 +89,7 @@
                       (statement/build mappings statement (:done state) encoders)
                       (executor/do-request exception-ch query-opts)
                       (<!))]
-    (log-status uuid from result)
+    (log-status result uuid from)
     (>! result-ch (vector query-name result)))))
 
 (defn- make-requests
