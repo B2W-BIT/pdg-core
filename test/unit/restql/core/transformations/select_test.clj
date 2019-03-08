@@ -1,5 +1,5 @@
 (ns restql.core.transformations.select-test
-  (require [clojure.test :refer [deftest is]])
+  (:require [clojure.test :refer [deftest is]])
   (:use restql.core.transformations.select))
 
 (deftest testing-simple-select
