@@ -14,15 +14,15 @@
 
   (testing "Testing post method"
     (is (= (parse-query "to heroes")
-            [:heroes {:from :heroes :method :post}])))
+           [:heroes {:from :heroes :method :post}])))
 
   (testing "Testing put method"
     (is (= (parse-query "into heroes")
-            [:heroes {:from :heroes :method :put}])))
+           [:heroes {:from :heroes :method :put}])))
 
   (testing "Testing delete method"
-           (is (= (parse-query "delete heroes")
-                  [:heroes {:from :heroes :method :delete}])))
+    (is (= (parse-query "delete heroes")
+           [:heroes {:from :heroes :method :delete}])))
 
   (testing "Testing simple query params a use clause"
     (is (= (parse-query "use cache-control = 900
@@ -81,9 +81,9 @@
 
   (testing "Testing query params one chained parameter and metadata"
     (is (= (binding [*print-meta* true]
-                    (pr-str (parse-query "from heroes as hero params id = player.id -> base64")))
+             (pr-str (parse-query "from heroes as hero params id = player.id -> base64")))
            (binding [*print-meta* true]
-                    (pr-str [:hero {:from :heroes :with {:id ^{:encoder :base64} [:player :id]} :method :get}])))))
+             (pr-str [:hero {:from :heroes :with {:id ^{:encoder :base64} [:player :id]} :method :get}])))))
 
   (testing "Testing query params headers"
     (is (= (parse-query "from heroes as hero headers Content-Type = \"application/json\" params id = 123")
@@ -134,8 +134,28 @@
              (pr-str [:products {:from         :product
                                  :with-headers {"content-type" "application/json"}
                                  :with         {:limit  ^{:expand false :encoder :json}
-                                                        [:product :id]
+                                                [:product :id]
                                                 :fields ["rating" "tags" "images" "groups"]}
                                  :select       #{:id :name :cep :phone}
                                  :method :get}]))))))
 
+(deftest testing-cache
+  (testing "Will not cache when ad-hoc query"
+    (let [query-parser-cache-counter (atom 0)
+          query-parser-counter (atom 0)]
+      (with-redefs [restql.parser.core/query-parser-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
+                    restql.parser.core/query-parser (fn [_] (do (swap! query-parser-counter inc) []))]
+        (parse-query "from heroes as hero" :query-type :ad-hoc)
+        (parse-query "from heroes as hero" :query-type :ad-hoc)
+        (is (= 0 @query-parser-cache-counter))
+        (is (= 2 @query-parser-counter)))))
+
+  (testing "Will cache when is NOT ad-hoc query"
+    (let [query-parser-cache-counter (atom 0)
+          query-parser-counter (atom 0)]
+      (with-redefs [restql.parser.core/query-parser-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
+                    restql.parser.core/query-parser (fn [_] (do (swap! query-parser-counter inc) []))]
+        (parse-query "from heroes as hero")
+        (parse-query "from heroes as hero" :query-type :saved)
+        (is (= 2 @query-parser-cache-counter))
+        (is (= 0 @query-parser-counter))))))

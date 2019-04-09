@@ -38,7 +38,7 @@
 (defn escape-context-values
   "Returns context with escaped values"
   [context]
-    (reduce (fn [map [key value]] (assoc map key (escape-double-quotes value))) {} context))
+  (reduce (fn [map [key value]] (assoc map key (escape-double-quotes value))) {} context))
 
 (defn handle-produce
   "Produces the EDN query of a given restQL query"
@@ -49,14 +49,19 @@
       (-> (produce tree)
           (edn/read-string)))))
 
-(def parse-query-text (cache/cached (fn [query-text]
-                                      (query-parser query-text))))
+(def query-parser-cache (cache/cached (fn [query-text]
+                                        (query-parser query-text))))
+
+(defn parse [query-text query-type]
+  (if (= :ad-hoc query-type)
+    (query-parser query-text)
+    (query-parser-cache query-text)))
 
 (defn parse-query
   "Parses the restQL query"
-  [query-text & {:keys [pretty context]}]
+  [query-text & {:keys [pretty context query-type]}]
 
-  (let [result (parse-query-text query-text)]
+  (let [result (parse query-text query-type)]
     (if (insta/failure? result)
       (handle-error result)
       (handle-success (handle-produce result context) :pretty pretty))))
