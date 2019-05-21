@@ -13,7 +13,7 @@
 (defn- query-and-join [requests query-opts]
   (let [operation (if (sequential? (first requests)) query-and-join make-request)]
     (->> requests
-         (map #(operation % query-opts))
+         (mapv #(operation % query-opts))
          (extract-result-keeping-channels-order))))
 
 (defn- single-request-not-multiplexed? [requests]
@@ -24,8 +24,8 @@
 
 (defn do-request [statements exception-ch {:keys [_debugging] :as query-opts}]
   (try+
-    (if (single-request-not-multiplexed? statements)
-        (make-request (first statements) query-opts)
-        (query-and-join statements query-opts))
+   (if (single-request-not-multiplexed? statements)
+     (make-request (first statements) query-opts)
+     (query-and-join statements query-opts))
    (catch Object e
      (go (>! exception-ch e)))))
