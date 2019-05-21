@@ -165,7 +165,7 @@ IgnoreErrorsFlag =
   <"use">;
 
 <KW_METHOD> =
-  ("from" | "to" | "into" | "delete");
+  ("from" | "to" | "into" | "delete" | "update");
 
 HttpMethod =
   KW_METHOD;

@@ -24,6 +24,10 @@
     (is (= (parse-query "delete heroes")
            [:heroes {:from :heroes :method :delete}])))
 
+  (testing "Testing patch method"
+    (is (= (parse-query "update heroes")
+           [:heroes {:from :heroes :method :patch}])))
+
   (testing "Testing simple query params a use clause"
     (is (= (parse-query "use cache-control = 900
                                       from heroes as hero")

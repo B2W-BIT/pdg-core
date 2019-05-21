@@ -215,6 +215,7 @@
       (= "to" content-str) ":post"
       (= "into" content-str) ":put"
       (= "delete" content-str) ":delete"
+      (= "update" content-str) ":patch"
       :else ":get")))
 
 (defn produce

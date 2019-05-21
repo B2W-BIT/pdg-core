@@ -275,6 +275,15 @@
       (let [result (execute-query uri "to villain with id = 1, name = \"Jocker\"")]
         (is (= 200 (get-in result [:villain :details :status])))))))
 
+(deftest execute-query-patch
+  (testing "Execute patch with simple body"
+    (with-routes!
+      {(fn [request]
+         (and (= (:path request) "/villain/1")
+              (= (:method request) "PATCH"))) (hero-route)}
+      (let [result (execute-query uri "update villain with id = 1, name = \"Thanos\"")]
+        (is (= 200 (get-in result [:villain :details :status])))))))
+
 (deftest request-with-float-param
   (testing "In-query float param should not be considered a chained call"
     (with-routes!
