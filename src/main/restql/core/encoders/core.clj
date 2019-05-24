@@ -6,7 +6,7 @@
 (defn set-encoder [data]
   (log/warn "use of deprecated encoder :set on" data)
   (->> data
-       (map str)
+       (mapv str)
        (into [])))
 
 (def base-encoders
@@ -25,7 +25,7 @@
 (defn perfom-encoding [encoders data]
   (let [encoder-key (get-encoder-key data)]
     (cond
-      (and (sequential? data) (= encoder-key :default)) (map (partial perfom-encoding encoders) data)
+      (and (sequential? data) (= encoder-key :default)) (mapv (partial perfom-encoding encoders) data)
       :else (let [encoder-fn (if-not (nil? encoder-key) (encoders encoder-key))]
               (if-not (nil? encoder-fn)
                 (encoder-fn data)

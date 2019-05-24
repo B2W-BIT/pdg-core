@@ -8,7 +8,9 @@
   (is (= true (encode base-encoders true)))
   (is (= "[\"a\",\"b\"]" (encode base-encoders ^{:encoder :json} ["a" "b"])))
   (is (= "[1,2]" (encode base-encoders ^{:encoder :json} [1 2])))
-  (is (nil? (encode base-encoders nil))))
+  (is (nil? (encode base-encoders nil)))
+  (is (= [[] []] (encode base-encoders [[] []])))
+  (is (vector? (encode base-encoders [[] []]))))
 
 (deftest test-simple-values-whithout-encoders
   (is (= 10   (encode nil 10)))
@@ -17,6 +19,6 @@
   (is (= ["a" "b"] (encode nil ["a" "b"])))
   (is (= [100.00] (encode nil [100.00])))
   (is (= ["{\"name\":\"Bruce\"}"] (encode nil [{:name "Bruce"}])))
-  (is (= [["{\"name\":\"Bruce\"}"]["{\"name\":\"Lex\"}"]] (encode nil [[{:name "Bruce"}] [{:name "Lex"}]])))
+  (is (= [["{\"name\":\"Bruce\"}"] ["{\"name\":\"Lex\"}"]] (encode nil [[{:name "Bruce"}] [{:name "Lex"}]])))
   (is (nil? (encode nil nil))))
 
