@@ -1,5 +1,5 @@
 (ns restql.core.encoders.json-encoder
-  (:require [cheshire.core :as json]))
+  (:require [restql.parser.json :as json]))
 
 (declare remove-nils)
 

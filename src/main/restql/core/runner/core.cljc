@@ -1,10 +1,11 @@
 (ns restql.core.runner.core
   (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout close!]]
-            [clojure.tools.logging :as log]
+            [restql.log :as log]
             [clojure.set :as s]
             [restql.core.query :as query]
             [restql.core.runner.executor :as executor]
-            [restql.core.statement.core :as statement]))
+            [restql.core.statement.core :as statement]
+            #?(:cljs ["uuid/v4" :as uuid4])))
 
 (defn- all-done? [state]
   (and (empty? (:to-do state)) (empty? (:requested state))))
@@ -65,32 +66,33 @@
 
 ; ######################################; ######################################
 
-(defn- log-if-408-or-aborted [result uid resource ]
+(defn- log-if-408-or-aborted [result uid resource]
   (let [status (:status result)]
     (cond
       (= status 408) (log/warn {:session uid :resource resource} "Request timed out")
       (nil? status)  (log/warn {:session uid :resource resource} "Request aborted")
       :else          :no-action)))
 
-(defn- log-status [result uid resource ]
+(defn- log-status [result uid resource]
   "in case of result being a list, for multiplexed calls"
   (if (sequential? result)
     (doall (map #(log-if-408-or-aborted % uid resource) (flatten result)))
     (log-if-408-or-aborted result uid resource)))
 
 (defn- generate-uuid! []
-  (.toString (java.util.UUID/randomUUID)))
+  #?(:clj (.toString (java.util.UUID/randomUUID))
+     :cljs (.toString (uuid4))))
 
 (defn- build-and-execute [mappings encoders {:keys [to-do state]} exception-ch query-opts uuid result-ch]
   (go
     (let [[query-name statement] to-do
-            from (:from (second statement))
-            result (->
-                      (statement/build mappings statement (:done state) encoders)
-                      (executor/do-request exception-ch query-opts)
-                      (<!))]
-    (log-status result uuid from)
-    (>! result-ch (vector query-name result)))))
+          from (:from (second statement))
+          result (->
+                  (statement/build mappings statement (:done state) encoders)
+                  (executor/do-request exception-ch query-opts)
+                  (<!))]
+      (log-status result uuid from)
+      (>! result-ch (vector query-name result)))))
 
 (defn- make-requests
   "goroutine that keeps listening from request-ch and performs http requests

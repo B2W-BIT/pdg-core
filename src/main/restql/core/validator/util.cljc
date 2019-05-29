@@ -1,6 +1,6 @@
 (ns restql.core.validator.util
-  (:require [clojure.string :as string]
-            [slingshot.slingshot :refer [throw+]]))
+  (:require [clojure.string :as string])
+  #?(:clj (:use [slingshot.slingshot :only [throw+]])))
 
 (defn interpolate [message context]
   (let [keys (keys context)]
@@ -12,8 +12,10 @@
     (let [res (fun context query)]
       (cond
         (= true res) query
-        (= false res) (throw+ {:type :validation-error :message message})
-        (map? res) (throw+ {:type :validation-error :message (interpolate message res)})
+        (= false res) #?(:clj (throw+ {:type :validation-error :message message})
+                         :cljs (throw {:type :validation-error :message message}))
+        (map? res) #?(:clj (throw+ {:type :validation-error :message (interpolate message res)})
+                      :cljs (throw {:type :validation-error :message (interpolate message res)}))
         :else query))))
 
 (defmacro rule [msg arg & body]

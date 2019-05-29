@@ -7,11 +7,11 @@
   (cond
     (and (sequential? chained) (every? keyword? chained)) chained
     (map? chained) (->>
-                     (map (fn [[k v]]
-                            (let [chained-params (get-chained-params v)]
-                              (when chained-params {k chained-params})))
-                          chained)
-                     (into {}))
+                    (map (fn [[k v]]
+                           (let [chained-params (get-chained-params v)]
+                             (when chained-params {k chained-params})))
+                         chained)
+                    (into {}))
     :else nil))
 
 (defn- has-chained-value? [statement]
@@ -49,11 +49,11 @@
 
 (defn- get-param-value [done-requests chain]
   (->
-    (get-chain-value-from-done-requests chain done-requests)
-    (as-> value
-          (if (and (has-meta? chain) (meta-available? value))
-            (with-meta value (meta chain))
-            value))))
+   (get-chain-value-from-done-requests chain done-requests)
+   (as-> value
+         (if (and (has-meta? chain) (meta-available? value))
+           (with-meta value (meta chain))
+           value))))
 
 (defn- assoc-value-to-param [done-requests [param-name chain]]
   (if (map? chain)
@@ -65,12 +65,12 @@
 
 (defn- merge-params-with-statement [statement params]
   (->>
-    params
-    (map (fn [[k v]] (if (map? v)
-                       [k (explode-list-vals-in-new-maps v)]
-                       [k v])))
-    (into {})
-    (deep-merge statement)))
+   params
+   (map (fn [[k v]] (if (map? v)
+                      [k (explode-list-vals-in-new-maps v)]
+                      [k v])))
+   (into {})
+   (deep-merge statement)))
 
 (defn- do-resolve [statement done-requests]
   (->> statement

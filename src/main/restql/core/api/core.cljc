@@ -1,6 +1,6 @@
 (ns restql.core.api.core
   (:require [restql.core.api.restql :as restql]
-            [cheshire.core :as json]))
+            [restql.parser.json :as json]))
 
 (defn concat-encoders [encoders]
   (if (nil? encoders)
@@ -23,4 +23,3 @@
                                               (when-not (nil? callback)
                                                 (callback result)))))
     output))
-

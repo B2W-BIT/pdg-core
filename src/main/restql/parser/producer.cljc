@@ -78,14 +78,12 @@
 
 (defn produce-with-rule-item-variable [with-rule-item]
   (let [item (get *restql-variables* (join "" (:content (find-first :Variable with-rule-item))))]
-    (join " " (map (fn [[key val]] (str ":"key " " val)) item))
-  ))
+    (join " " (map (fn [[key val]] (str ":" key " " val)) item))))
 
 (defn produce-with-rule-item-conditional [with-rule-item]
-  (if (find-first :Variable with-rule-item) 
+  (if (find-first :Variable with-rule-item)
     (produce-with-rule-item-variable with-rule-item)
-    (produce-with-rule-item with-rule-item)
-  ))
+    (produce-with-rule-item with-rule-item)))
 
 (defn produce-with-param-value [with-param-value]
   (let [value     (->> with-param-value (find-first :WithParamValueData) produce)
@@ -94,8 +92,8 @@
 
 (defn produce-with-param-modifier-list [param-modifiers]
   (if (nil? param-modifiers) ""
-    (let [modifiers (map produce param-modifiers)]
-      (str "^" (pr-str (into {} modifiers)) " "))))
+      (let [modifiers (map produce param-modifiers)]
+        (str "^" (pr-str (into {} modifiers)) " "))))
 
 (defn produce-with-param-modifier [param-modifier]
   (produce (first param-modifier)))
@@ -147,15 +145,14 @@
 (defn format-variable [value]
   (cond
     (nil? value) "nil"
-    (sequential? value) (str "[" (->> value (map format-variable) (join " ") ) "]")
+    (sequential? value) (str "[" (->> value (map format-variable) (join " ")) "]")
     (= "true" value) "true"
     (= "false" value) "false"
     :else (str "\"" value "\"")))
 
 (defn produce-variable [content]
   (let [varname (join "" content)
-        value (get *restql-variables* varname)
-       ]
+        value (get *restql-variables* varname)]
     (format-variable value)))
 
 (defn produce-with-param-value-data [value-data]
@@ -223,72 +220,72 @@
   [tree]
 
   (if (nil? tree) ""
-    (let [{:keys [tag content]} tree]
-      (case tag
-      :Query                       (produce-query content)
+      (let [{:keys [tag content]} tree]
+        (case tag
+          :Query                       (produce-query content)
 
-      :UseBlock                    (produce-use-block content)
-      :UseRule                     (produce-use-rule content)
-      :UseRuleKey                  (join-chars ":" content)
-      :UseRuleValue                (join-chars "" content)
+          :UseBlock                    (produce-use-block content)
+          :UseRule                     (produce-use-rule content)
+          :UseRuleKey                  (join-chars ":" content)
+          :UseRuleValue                (join-chars "" content)
 
-      :QueryBlock                  (produce-query-block content)
-      :QueryItem                   (produce-query-item content)
+          :QueryBlock                  (produce-query-block content)
+          :QueryItem                   (produce-query-item content)
 
-      :FromResource                (join-chars ":" content)
+          :FromResource                (join-chars ":" content)
 
       ; Keeping from for "get" default for backwards compatibility reasons
-      :HttpMethod                  (produce-http-method content)
-      :ResultAlias                 (join-chars ":" content)
-      :ResultIn                    (produce-in-rule content)
+          :HttpMethod                  (produce-http-method content)
+          :ResultAlias                 (join-chars ":" content)
+          :ResultIn                    (produce-in-rule content)
 
-      :HeaderRule                  (produce-header-rule content)
-      :HeaderRuleItem              (produce-header-rule-item content)
-      :HeaderName                  (produce-header-name content)
-      :HeaderValue                 (produce-header-value content)
-      :LiteralHeaderValue          (join-chars "" content)
+          :HeaderRule                  (produce-header-rule content)
+          :HeaderRuleItem              (produce-header-rule-item content)
+          :HeaderName                  (produce-header-name content)
+          :HeaderValue                 (produce-header-value content)
+          :LiteralHeaderValue          (join-chars "" content)
 
-      :TimeoutRule                 (produce-timeout-rule content)
-      :TimeoutRuleValue            (join-chars "" content)
+          :TimeoutRule                 (produce-timeout-rule content)
+          :TimeoutRuleValue            (join-chars "" content)
 
-      :WithRule                    (produce-with-rule content)
-      :WithRuleItem                (produce-with-rule-item-conditional content)
-      :WithParamName               (join-chars ":" content)
-      :WithParamValue              (produce-with-param-value content)
-      :WithParamValueData          (produce-with-param-value-data content)
-      :WithParamPrimitiveValue     (produce-primitive-value content)
-      :ListParamValue              (produce-list-value content)
-      :ComplexParamValue           (produce-complex-value content)
-      :Chaining                    (produce-chaining content)
-      :Variable                    (produce-variable content)
-      :PathItem                    (join-chars ":" content)
+          :WithRule                    (produce-with-rule content)
+          :WithRuleItem                (produce-with-rule-item-conditional content)
+          :WithParamName               (join-chars ":" content)
+          :WithParamValue              (produce-with-param-value content)
+          :WithParamValueData          (produce-with-param-value-data content)
+          :WithParamPrimitiveValue     (produce-primitive-value content)
+          :ListParamValue              (produce-list-value content)
+          :ComplexParamValue           (produce-complex-value content)
+          :Chaining                    (produce-chaining content)
+          :Variable                    (produce-variable content)
+          :PathItem                    (join-chars ":" content)
 
-      :WithParamValueModifierList  (produce-with-param-modifier-list content)
-      :WithParamModifier           (produce-with-param-modifier content)
-      :WithModifierAlias           (produce-with-modifier-alias content)
-      :WithModifierFunction        (produce-with-modifier-function content)
-      :WithModifierFunctionName    (join-chars "" content)
-      :WithModifierFunctionArgList (product-with-modifier-function-arg-list content)
-      :WithModifierFunctionArg     (edn/read-string (join-chars "" content))
+          :WithParamValueModifierList  (produce-with-param-modifier-list content)
+          :WithParamModifier           (produce-with-param-modifier content)
+          :WithModifierAlias           (produce-with-modifier-alias content)
+          :WithModifierFunction        (produce-with-modifier-function content)
+          :WithModifierFunctionName    (join-chars "" content)
+          :WithModifierFunctionArgList (product-with-modifier-function-arg-list content)
+          :WithModifierFunctionArg     (edn/read-string (join-chars "" content))
 
-      :ComplexParamItem            (produce-complex-param-item content)
-      :ComplexParamKey             (join-chars ":" content)
+          :ComplexParamItem            (produce-complex-param-item content)
+          :ComplexParamKey             (join-chars ":" content)
 
-      :HideRule                    (produce-hide-rule)
+          :HideRule                    (produce-hide-rule)
 
-      :OnlyRule                    (produce-only-rule content)
-      :OnlyRuleItem                (produce-only-rule-item content)
-      :OnlyRuleItemName            (produce-only-rule-item-name content)
-      :OnlyRuleItemPath            (join-chars "" content)
-      :OnlyRuleItemModifierList    (produce-only-rule-item-modifer-list content)
-      :OnlyRuleItemModifier        (produce-only-rule-item-modifier content)
-      :OnlyRuleItemModifierName    (join-chars "" content)
-      :OnlyRuleItemModifierArgList (produce-only-rule-item-modifier-arg-list content)
-      :OnlyRuleItemModifierArg     (join-chars "" content)
-      :OnlyRuleItemModifierArgVar  (produce-only-rule-with-variable content)
+          :OnlyRule                    (produce-only-rule content)
+          :OnlyRuleItem                (produce-only-rule-item content)
+          :OnlyRuleItemName            (produce-only-rule-item-name content)
+          :OnlyRuleItemPath            (join-chars "" content)
+          :OnlyRuleItemModifierList    (produce-only-rule-item-modifer-list content)
+          :OnlyRuleItemModifier        (produce-only-rule-item-modifier content)
+          :OnlyRuleItemModifierName    (join-chars "" content)
+          :OnlyRuleItemModifierArgList (produce-only-rule-item-modifier-arg-list content)
+          :OnlyRuleItemModifierArg     (join-chars "" content)
+          :OnlyRuleItemModifierArgVar  (produce-only-rule-with-variable content)
 
-      :FlagsRule                   (produce-flags-rule content)
-      :FlagRule                    (produce-flag-rule content)
-      :IgnoreErrorsFlag            (produce-ignore-error-flag)
+          :FlagsRule                   (produce-flags-rule content)
+          :FlagRule                    (produce-flag-rule content)
+          :IgnoreErrorsFlag            (produce-ignore-error-flag)
 
-      (str "<UNKNOWN RULE>" (pr-str {:tag tag :content content}))))))
+          (str "<UNKNOWN RULE>" (pr-str {:tag tag :content content}))))))

@@ -3,20 +3,20 @@
             [restql.core.encoders.core :as encoders]
             [clojure.set :as s]
             [restql.core.query :as query])
-  (:use [slingshot.slingshot :only [throw+ try+]])
-)
+  #?(:clj (:use [slingshot.slingshot :only [try+]])
+     :cljs (:use [goog.Uri :only [parse]])))
 
 (defn without-from [[_ data]]
   (not (contains? data :from)))
 
 (defn invalid-data-key [key]
   (not
-    (#{:from :in :method :with :with-headers :with-body :timeout :select} key)))
+   (#{:from :in :method :with :with-headers :with-body :timeout :select} key)))
 
 (defn keyword-or-vector? [value]
   (or
-    (keyword? value)
-    (vector? value)))
+   (keyword? value)
+   (vector? value)))
 
 (defn get-bindings [q]
   (->> q
@@ -26,7 +26,7 @@
 
 (defn is-mapped [mappings resource]
   (not
-    (nil? (get mappings resource))))
+   (nil? (get mappings resource))))
 
 (defn all-keys-are-keywords [a-map]
   (->> a-map keys (filter (complement keyword?)) count (= 0)))
@@ -40,28 +40,30 @@
   (if (contains? data :timeout)
     (if (-> data :timeout number?)
       (and
-        (-> data :timeout (<= 5000))
-        (-> data :timeout (> 0)))
+       (-> data :timeout (<= 5000))
+       (-> data :timeout (> 0)))
       false)
     true))
 
 (defn is-valid-select [value]
   (or
-    (= :none value)
-    (set? value)))
+   (= :none value)
+   (set? value)))
 
-(defn is-valid-url [url]
-    (try+
-        (clojure.java.io/as-url url)
-        true
-    (catch Object _
-        false
-    ))
-)
+#?(:clj (defn is-valid-url [url]
+          (try+
+           (clojure.java.io/as-url url)
+           true
+           (catch Object _
+             false)))
+
+   :cljs (defn is-valid-url [url]
+           (let [uri (parse url)]
+             (and (seq (.getScheme uri))
+                  (re-find #"//" url)))))
 
 (defn get-urls [mappings resources]
-    (map (partial get mappings) resources)
-)
+  (map (partial get mappings) resources))
 
 (defrules validate
 
@@ -80,9 +82,9 @@
   (rule "Query has invalid bindings. Error was in |:invalid|. Use keywords instead"
         [context q]
         (let [invalids (->> q
-                         (partition 2)
-                         (map first)
-                         (filter (complement keyword?)))]
+                            (partition 2)
+                            (map first)
+                            (filter (complement keyword?)))]
           (if (= 0 (count invalids))
             true
             {:invalid (-> invalids first pr-str)})))
@@ -157,9 +159,9 @@
                             (filter keyword?)
                             (get-urls (:mappings context))
                             (filter (complement is-valid-url)))]
-            (if (= 0 (count invalids))
-                true
-                {:invalid (-> invalids first pr-str)})))
+          (if (= 0 (count invalids))
+            true
+            {:invalid (-> invalids first pr-str)})))
 
   (rule "with must be a map or not be used. Found a problem in :invalid"
         [context q]
@@ -209,7 +211,7 @@
                             (filter (complement valid-timeout)))]
           (if (= 0 (count invalids))
             true
-            {:invalid (-> invalids first pr-str)})) )
+            {:invalid (-> invalids first pr-str)})))
 
   (rule "When a query has a select key, it must be a set or :none. Error found in :invalid"
         [context q]

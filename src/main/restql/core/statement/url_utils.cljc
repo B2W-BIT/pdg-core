@@ -1,6 +1,7 @@
 (ns restql.core.statement.url-utils
-  (:require [clojure.string :as str]
-            [ring.util.codec :refer [url-encode]]))
+  #?(:clj (:require [clojure.string :as str]
+                    [ring.util.codec :refer [url-encode]])
+     :cljs (:require [clojure.string :as str])))
 
 (defn- filter-variables [items]
   (->> items
@@ -12,8 +13,10 @@
   "receives an string containing a url pattern and returns
    a set with all declared parameters"
   [path]
-  (->> (str/split path #"\/")
-       (filter-variables)))
+  #?(:clj (->> (str/split path #"\/")
+               (filter-variables))
+     :cljs (->> (str/split path #"/")
+                (filter-variables))))
 
 (defn- extract-query-parameters [query-strings]
   (->> (str/split query-strings #"\&")
@@ -23,14 +26,15 @@
   (let [path-parameters (some-> splitted-url (get 0) (extract-path-parameters))
         query-parameters (if (= 2 (count splitted-url)) (some-> splitted-url (get 1) (extract-query-parameters)) #{})]
     (assoc {} :path path-parameters
-              :query query-parameters)))
+           :query query-parameters)))
 
 (defn- replace-url-with-param [params url param-key]
   (-> url
       (str/split #"\?")
       (get 0)
       (str/replace (re-pattern (str ":" (name param-key)))
-                   (url-encode (str (param-key params))))))
+                   #?(:clj (url-encode (str (param-key params)))
+                      :cljs (js/encodeURI (str (param-key params)))))))
 
 (defn extract-url-parameters
   "given a parameterized url returns a
@@ -91,6 +95,4 @@
   "gets a resource url from mappings"
   [mappings statement]
   (->> (:from statement)
-       (get mappings)
-  )
-)
+       (get mappings)))

@@ -1,7 +1,7 @@
 (ns restql.core.encoders.core
   (:require [restql.core.encoders.json-encoder :as json]
-            [clojure.tools.logging :as log]
-            [slingshot.slingshot :refer [throw+ try+]]))
+            [restql.log :as log])
+  #?(:clj (:use [slingshot.slingshot :only [throw+]])))
 
 (defn set-encoder [data]
   (log/warn "use of deprecated encoder :set on" data)
@@ -29,7 +29,8 @@
       :else (let [encoder-fn (if-not (nil? encoder-key) (encoders encoder-key))]
               (if-not (nil? encoder-fn)
                 (encoder-fn data)
-                (throw+ {:type :unrecognized-encoding :data encoder-key}))))))
+                #?(:clj (throw+ {:type :unrecognized-encoding :data encoder-key})
+                   :cljs (throw {:type :unrecognized-encoding :data encoder-key})))))))
 
 (defn encode [encoders data]
   (-> base-encoders
