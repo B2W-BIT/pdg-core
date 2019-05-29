@@ -1,8 +1,8 @@
 (ns restql.core.statement.core
-  (:require [restql.core.statement [expand :refer [expand]]
-             [resolve-chained-values :refer [resolve-chained-values]]
-             [apply-encoders :refer [apply-encoders]]]
-            [restql.core.util.assoc? :refer [assoc?]]
+  (:require [restql.core.statement.expand :refer [expand]]
+            [restql.core.statement.resolve-chained-values :refer [resolve-chained-values]]
+            [restql.core.statement.apply-encoders :refer [apply-encoders]]
+            [restql.core.util.assoc_if_not_nil :refer [assoc?]]
             [restql.core.statement.url-utils :as url-utils]))
 
 (defn- add-default-method [request]

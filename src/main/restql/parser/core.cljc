@@ -3,12 +3,15 @@
             [restql.core.cache :as cache]
             [restql.parser.printer :refer [pretty-print]]
             [restql.parser.producer :refer [produce *restql-variables*]]
-            [clojure.java.io :as io]
-            [clojure.tools.reader.edn :as edn])
-  (:use     [slingshot.slingshot :only [throw+]]))
+            [clojure.tools.reader.edn :as edn]
+            #?(:clj [clojure.java.io :as io]
+               :cljs ["fs"]))
+  #?(:clj (:use [slingshot.slingshot :only [throw+]])))
 
-(def query-parser
-  (insta/parser (io/resource "grammar.ebnf") :output-format :enlive))
+#?(:clj (def query-parser
+          (insta/parser (io/resource "grammar.ebnf") :output-format :enlive))
+   :cljs (def query-parser
+           (insta/parser (fs/readFileSync process.env.grammar_ebnf "utf8") :output-format :enlive)))
 
 (defn handle-success
   "Handles parsing success"
@@ -23,10 +26,14 @@
   [result]
 
   (let [error (insta/get-failure result)]
-    (throw+ {:type :parse-error
-             :reason (:reason error)
-             :line (:line error)
-             :column (:column error)})))
+    #?(:clj (throw+ {:type :parse-error
+                     :reason (:reason error)
+                     :line (:line error)
+                     :column (:column error)})
+       :cljs (throw            {:type :parse-error
+                                :reason (:reason error)
+                                :line (:line error)
+                                :column (:column error)}))))
 
 (defn- escape-double-quotes
   "Escape double quotes in params to prevent parsing errors"
@@ -60,7 +67,6 @@
 (defn parse-query
   "Parses the restQL query"
   [query-text & {:keys [pretty context query-type]}]
-
   (let [result (parse query-text query-type)]
     (if (insta/failure? result)
       (handle-error result)
