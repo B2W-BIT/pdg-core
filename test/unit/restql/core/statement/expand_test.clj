@@ -39,4 +39,9 @@
 
   (testing "Expand multiple list value with keeps non list values"
     (is (= [{:from :resource-name :with {:id 1 :name "a" :job "clojurist"} :multiplexed true} {:from :resource-name :with {:id nil :name "b" :job "clojurist"} :multiplexed true}]
-           (expand {:from :resource-name :with {:id [1 nil] :name ["a", "b"] :job "clojurist"}})))))
+           (expand {:from :resource-name :with {:id [1 nil] :name ["a", "b"] :job "clojurist"}}))))
+
+  (testing "Nil is not expandable (infinite recursion bug)"
+    (is (=  [[{:from :sidekick, :with {:heroes :h1}, :method :get, :multiplexed true}
+              {:from :sidekick, :with {:heroes :villains}, :method :get, :multiplexed true}]]
+            (expand {:from :sidekick, :with {:heroes [[:h1 :villains]]}, :method :get})))))
