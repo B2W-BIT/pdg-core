@@ -17,7 +17,9 @@
        (not= 0)))
 
 (defn- should-expand? [params]
-  (every? not-empty (vals params)))
+  (if (nil? (vals params))
+    false
+    (every? not-empty (vals params))))
 
 (defn- remove-first-values [list-params]
   (update-in-seq list-params (keys list-params) rest))
