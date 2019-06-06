@@ -18,7 +18,7 @@
                                 :query (stringify-query query)
                                 :options query-opts
                                 :callback (fn [result]
-                                            (let [parsed (json/parse-string result true)]
+                                            (let [parsed (json/parse-string result)]
                                               (deliver output parsed)
                                               (when-not (nil? callback)
                                                 (callback result)))))

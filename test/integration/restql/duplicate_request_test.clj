@@ -1,6 +1,6 @@
 (ns restql.duplicate-request-test
   (:require [clojure.test :refer :all]
-            [cheshire.core :as json]
+            [restql.parser.json :as json]
             [restql.core.api.restql :as restql]
             [stub-http.core :refer :all]))
 

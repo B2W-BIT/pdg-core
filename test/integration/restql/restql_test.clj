@@ -3,7 +3,7 @@
             [restql.parser.core :as parser]
             [restql.core.api.restql :as restql]
             [byte-streams :as bs]
-            [cheshire.core :as json]
+            [restql.parser.json :as json]
             [stub-http.core :refer :all]
             [clojure.core.async :refer :all]
             [restql.test-util :refer [route-response route-request route-header]]))
