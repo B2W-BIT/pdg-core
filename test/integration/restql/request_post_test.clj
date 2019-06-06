@@ -3,7 +3,7 @@
             [restql.parser.core :as parser]
             [restql.core.api.restql :as restql]
             [byte-streams :as bs]
-            [cheshire.core :as json]
+            [restql.parser.json :as json]
             [stub-http.core :refer :all]))
 
 (defn hero-route []
@@ -21,7 +21,7 @@
 
 (defn get-stub-body [request]
   (if-not (nil? (:body request))
-          (val (first (:body request)))))
+    (val (first (:body request)))))
 
 (defn stub-post-route
   ([path]
@@ -29,11 +29,11 @@
   ([path body]
    (stub-post-route path body nil))
   ([path body query-params]
-    (fn [request]
-      (and (= (get request :path) path)
-           (= (get request :method) "POST")
-           (= (get request :query-params) query-params)
-           (= (get-stub-body request) (if-not (nil? body) (json/generate-string body)))))))
+   (fn [request]
+     (and (= (get request :path) path)
+          (= (get request :method) "POST")
+          (= (get request :query-params) query-params)
+          (= (get-stub-body request) (if-not (nil? body) (json/generate-string body)))))))
 
 (deftest request-with-post-query
   (testing "Post with simple body"

@@ -9,7 +9,6 @@
                  [org.clojure/tools.logging "0.4.1"]
                  [org.clojure/tools.reader "1.3.2"]
                  [aleph "0.4.6"]
-                 [cheshire "5.8.1"]
                  [r0man/environ "1.1.0"]
                  [instaparse "1.4.10"]
                  [prismatic/schema "1.1.10"]
@@ -17,7 +16,8 @@
                  [se.haleby/stub-http "0.2.7"]
                  [funcool/httpurr "1.1.0"]
                  [funcool/promesa "2.0.1"]
-                 [slingshot "0.12.2"]]
+                 [slingshot "0.12.2"]
+                 [metosin/jsonista "0.2.2"]]
   :hooks [leiningen.cljsbuild]
   :aot [restql.core.api.RestQLJavaApi]
   :profiles {:test {:dependencies [[se.haleby/stub-http "0.2.7"]]}

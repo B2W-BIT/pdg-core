@@ -1,5 +1,5 @@
 (ns restql.test-util
-  (:require [cheshire.core :as json]))
+  (:require [restql.parser.json :as json]))
 
 (defn get-stub-body [request]
   (if-not (nil? (:body request))
@@ -24,7 +24,7 @@
    {:status status :content-type "application/json" :body (json/generate-string body)}))
 
 (defn- verify-header [request [k v]]
- (= (get-in request [:headers (keyword k)]) v))
+  (= (get-in request [:headers (keyword k)]) v))
 
 (defn route-header
   [path headers]

@@ -2,7 +2,6 @@
   (:require [clojure.test :refer [deftest is]]
             [restql.core.api.restql :as restql]
             [restql.test-util :as test-util]
-            [cheshire.core :as json]
             [stub-http.core :refer :all]
             [clojure.pprint :refer :all]))
 
@@ -15,31 +14,31 @@
 (deftest simple-filter
   (with-routes! {(test-util/route-request "/hero")
                  (test-util/route-response {:id "B20" :name "Batman"})}
-      (let [response (execute-query uri "from hero only name")]
-        (is (= "Batman" (get-in response [:hero :result :name])))
-        (is (= nil      (get-in response [:hero :result :id]))))))
+    (let [response (execute-query uri "from hero only name")]
+      (is (= "Batman" (get-in response [:hero :result :name])))
+      (is (= nil      (get-in response [:hero :result :id]))))))
 
 (deftest multiplex-filter
   (with-routes! {(test-util/route-request "/hero" {:id 1})
                  (test-util/route-response {:id "B10" :name "Batman"})
                  (test-util/route-request "/hero" {:id 2})
                  (test-util/route-response {:id "B20" :name "Robin"})}
-      (let [response (execute-query uri "from hero with id = [1,2] only name")
-            result (get-in response [:hero :result])]
-        (is (= nil      (:id (first result))))
-        (is (= "Batman" (:name (first result))))
-        (is (= nil      (:id (second result))))
-        (is (= "Robin"  (:name (second result)))))))
+    (let [response (execute-query uri "from hero with id = [1,2] only name")
+          result (get-in response [:hero :result])]
+      (is (= nil      (:id (first result))))
+      (is (= "Batman" (:name (first result))))
+      (is (= nil      (:id (second result))))
+      (is (= "Robin"  (:name (second result)))))))
 
 (deftest array-filter
   (with-routes! {(test-util/route-request "/hero")
                  (test-util/route-response {:id "B10" :sidekicks [{:name "Robin"} {:name "Alfred"}]})}
-      (let [response (execute-query uri "from hero only sidekicks.name")
-            result (get-in response [:hero :result])]
-          (is (= nil (:id (first (:sidekicks result)))))
-          (is (= "Robin" (:name (first (:sidekicks result)))))
-          (is (= nil (:id (second (:sidekicks result)))))
-          (is (= "Alfred" (:name (second (:sidekicks result))))))))
+    (let [response (execute-query uri "from hero only sidekicks.name")
+          result (get-in response [:hero :result])]
+      (is (= nil (:id (first (:sidekicks result)))))
+      (is (= "Robin" (:name (first (:sidekicks result)))))
+      (is (= nil (:id (second (:sidekicks result)))))
+      (is (= "Alfred" (:name (second (:sidekicks result))))))))
 
 (deftest array-multiplex-filter
   (with-routes! {(test-util/route-request "/heroes" {:id 1})
