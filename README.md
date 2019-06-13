@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  restQL-http is a server to run <strong>restQL</strong> queries, making easy to fetch information from multiple services in the most efficient manner
+  restQL-clojure allows to run <strong>restQL</strong> queries directly in the JVM, making easy to fetch information from multiple services in the most efficient manner
 </p>
 
 
