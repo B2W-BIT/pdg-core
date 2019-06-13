@@ -1,10 +1,4 @@
 <p align="center">
-  <a href="http://restql.b2w.io">
-    <img width="537px" height="180px" alt="restQL" src="./docs/assets/images/logo_text.png?sanitize=true">
-  </a>
-</p>
-
-<p align="center">
   restQL-clojure allows to run <strong>restQL</strong> queries directly in the JVM, making easy to fetch information from multiple services in the most efficient manner
 </p>
 
