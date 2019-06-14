@@ -11,7 +11,7 @@
 
 (def default-values {:pool-connections-per-host 500
                      :pool-total-connections 10000
-                     :pool-max-queue-size 65536
+                     :pool-max-queue-size 100
                      :pool-control-period 250})
 
 (defn- get-default
