@@ -9,10 +9,10 @@
             [restql.hooks.core :as hook])
   (:import [java.net URLDecoder]))
 
-(def default-values {:pool-connections-per-host 100
+(def default-values {:pool-connections-per-host 500
                      :pool-total-connections 10000
                      :pool-max-queue-size 65536
-                     :pool-control-period 60000})
+                     :pool-control-period 250})
 
 (defn- get-default
   ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
