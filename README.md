@@ -21,11 +21,32 @@ Add restQL dependency to your project
 [b2wdigital/restql-core "2.4.0"]
 ```
 
+**NPM**
+
+```shell
+npm i @b2wdigital/restql
+```
+
 ### First query
 
+**Clojure**
 ```clojure
 (require '[restql.core.api.restql :as restql])
 (restql/execute-query :mappings { :user "http://your.api.url/users/:name" } :query "from user with name = $name" :params { :name "Duke Nukem" } )
+```
+
+**Node**
+```js
+var restlq = require('@b2wdigital/restql')
+
+// executeQuery(mappings, query, params, options) => <Promise>
+restql
+  .executeQuery(
+    {user: "http://your.api.url/users/:name"},
+    "from user with name = $name",
+    { name: "Duke Nukem" })
+  .then(response => console.log(response))
+  .catch(error => console.log(error))
 ```
 
 In the example above restQL will call user API passing "Duke Nukem" in the name param.

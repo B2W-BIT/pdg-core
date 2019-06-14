@@ -1,0 +1,9 @@
+{
+  "name": "@b2wdigital/restql",
+  "version": "0.1.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/B2W-BIT/restQL-clojure"
+  },
+  "main": "./dist/node/restql.js"
+}

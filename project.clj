@@ -26,11 +26,11 @@
   :plugins [[lein-ancient "0.6.15"]
             [lein-cloverage "1.1.0"]
             [lein-cljsbuild "1.1.7"]]
-  :cljsbuild {:builds [{:id "prod"
+  :cljsbuild {:builds [{:id "node"
                         :source-paths ["src"]
                         :compiler {:main restql.core.api.restql
-                                   :output-to "dist/restql.js"
-                                   :output-dir "dist/out"
+                                   :output-to "dist/lib/restql.js"
+                                   :output-dir "dist/lib"
                                    :target :nodejs
                                    :install-deps true
                                    :infer-externs true
