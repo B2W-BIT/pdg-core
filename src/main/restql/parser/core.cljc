@@ -5,13 +5,14 @@
             [restql.parser.producer :refer [produce *restql-variables*]]
             [clojure.tools.reader.edn :as edn]
             #?(:clj [clojure.java.io :as io]
-               :cljs ["fs"]))
+               :cljs ["fs"])
+            #?(:cljs ["path"]))
   #?(:clj (:use [slingshot.slingshot :only [throw+]])))
 
 #?(:clj (def query-parser
           (insta/parser (io/resource "grammar.ebnf") :output-format :enlive))
    :cljs (def query-parser
-           (insta/parser (fs/readFileSync process.env.grammar_ebnf "utf8") :output-format :enlive)))
+           (insta/parser (fs/readFileSync (or process.env.grammar_ebnf (path/join (js* "__dirname") "./grammar.ebnf")) "utf8") :output-format :enlive)))
 
 (defn handle-success
   "Handles parsing success"

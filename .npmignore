@@ -1,0 +1,8 @@
+src
+target
+test
+.editorconfig
+.lein*
+.travis*
+node
+*.clj
