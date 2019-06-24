@@ -21,11 +21,11 @@
        (count)
        (not= 0)))
 
-(defn- get-value-from-path [path {body :body}]
-  (if (sequential? body)
-    (->> body
-         (map #(get-in-with-list-support path %)))
-    (get-in-with-list-support path body)))
+(defn- get-value-from-path [path {status :status body :body}]
+  (cond
+    (and status (not (>= 399 status 200))) :empty
+    (sequential? body) (map #(get-in-with-list-support path %) body)
+    :else (get-in-with-list-support path body)))
 
 (defn- get-value-from-resource-list [path resource]
   (if (sequential? resource)

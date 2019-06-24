@@ -236,7 +236,7 @@
 (deftest request-with-encoder-2
   (with-routes!
     {"/hero" (hero-with-bag-route)
-    (route-request "/sidekick" {:bag {:capacity 10}}) (sidekick-route)}
+     (route-request "/sidekick" {:bag {:capacity 10}}) (sidekick-route)}
     (let [result (execute-query uri "from hero \n from sidekick with bag = hero.bag -> json")]
       (is (= 200 (get-in result [:hero :details :status])))
       (is (= {:hi "I'm hero", :bag {:capacity 10}} (get-in result [:hero :result])))
@@ -292,8 +292,7 @@
               (= (:method request) "POST")
               (= (get-stub-body request) (json/generate-string {:version 1.5})))) (hero-route)}
       (let [result (execute-query uri "to hero with version = 1.5")]
-        (is (= 200 (get-in result [:hero :details :status]))))))
-)
+        (is (= 200 (get-in result [:hero :details :status])))))))
 
 (deftest request-with-param-map
   (with-routes!
@@ -359,14 +358,14 @@
        (hero-route)}
       (let [result (execute-query uri "from hero" {} {:forward-headers {"restql-query-control" "ad-hoc", "test" "test", "accept" "*/*"}})]
         (is (= 200 (get-in result [:hero :details :status]))))))
-  
+
   (testing "Replacing request headers with query headers"
     (with-routes!
       {(route-header "/hero" {"test" "diff"})
        (hero-route)}
       (let [result (execute-query uri "from hero \nheaders Test = \"diff\"" {} {:forward-headers {"restql-query-control" "ad-hoc", "test" "test", "accept" "*/*"}})]
         (is (= 200 (get-in result [:hero :details :status]))))))
-  
+
   (testing "One request with fowarded-headers, one request with query headers"
     (with-routes!
       {(route-header "/hero" {"test" "test"})
@@ -374,8 +373,39 @@
        (route-header "/sidekick" {"test" "diff"})
        (sidekick-route)}
       (let [result (execute-query uri "from hero \nfrom sidekick\nheaders Test = \"diff\"" {} {:forward-headers {"restql-query-control" "ad-hoc", "test" "test", "accept" "*/*"}})]
-        (is (= 200 (get-in result [:hero :details :status]))))))
-  )
+        (is (= 200 (get-in result [:hero :details :status])))))))
+
+(deftest request-with-missing-param
+  (testing "Request with missing param"
+    (with-routes!
+      {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}
+      (let [result_without_param (execute-query uri "from hero with name = $name, id = $id" {:name "Dwayne \"The Rock\" Johnson"})]
+        (is (= 400 (get-in result_without_param [:hero :details :status])))
+        (is (= "The request was skipped due to missing {:id} param value" (get-in result_without_param [:hero :result]))))))
+
+  (testing "Chained request with missing param"
+    (with-routes!
+      {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}
+      {{:path "/sidekick"} (sidekick-route)}
+      (let [result_without_param (execute-query uri "from hero with id = $id\n
+                                                     from sidekick with name = hero.name" {:name "Dwayne \"The Rock\" Johnson"})]
+        (is (= 400 (get-in result_without_param [:hero :details :status])))
+        (is (= "The request was skipped due to missing {:id} param value" (get-in result_without_param [:hero :result])))
+        (is (= 400 (get-in result_without_param [:sidekick :details :status])))
+        (is (= "The request was skipped due to missing {:name} param value" (get-in result_without_param [:sidekick :result]))))))
+
+  (testing "Request with param set to nil"
+    (with-routes!
+      {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}
+      (let [result_with_param (execute-query uri "from hero with name = $name, id = $id" {:name "Dwayne \"The Rock\" Johnson" :id nil})]
+        (is (= 200 (get-in result_with_param [:hero :details :status]))))))
+
+  (testing "Request with nil param and missing param"
+    (with-routes!
+      {{:path "/hero" :query-params {:name "Dwayne+%22The+Rock%22+Johnson"}} (hero-route)}
+      (let [result (execute-query uri "from hero with name = $name, id = $id, weapon = $weapon" {:name "Dwayne \"The Rock\" Johnson" :id nil})]
+        (is (= 400 (get-in result [:hero :details :status])))
+        (is (= "The request was skipped due to missing {:weapon} param value" (get-in result [:hero :result])))))))
 
 (deftest request-with-null-header-value
   (with-routes!
@@ -397,7 +427,7 @@
   (testing "Flatten list value"
     (with-routes!
       {"/hero" (hero-route)
-      (route-request "/sidekick" {:id "2"}) (sidekick-route)}
+       (route-request "/sidekick" {:id "2"}) (sidekick-route)}
       (let [result (execute-query uri "from hero \n from sidekick with id = hero.villains -> flatten")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status]))))))
@@ -644,16 +674,16 @@
         (is (= 200 (:status (get-in result [:hero :details]))))
         (is (= {:villains ["b"]} (get-in result [:hero :result])))))))
 
-(deftest request-with-nested-multiplex-and-flatten 
+(deftest request-with-nested-multiplex-and-flatten
   (testing "Nested map multiplexed"
     (with-routes!
-      {(route-request "/weapons") 
+      {(route-request "/weapons")
        (route-response {:swords [{:name "1"} {:name "2"}]
                         :types {:typeId "8"}
                         :source "MAGICAL"})
        (route-request "/sidekick" {:weapon {:name "1" :typeId "8" :invisible false} :source "MAGICAL"})
        (route-response {:ok "Yeap!"})
-       (route-request "/sidekick" {:weapon {:name "2" :typeId "8" :invisible false} :source "MAGICAL"}) 
+       (route-request "/sidekick" {:weapon {:name "2" :typeId "8" :invisible false} :source "MAGICAL"})
        (route-response {:ok "Yeah!"})}
       (let [result (execute-query uri "from weapons hidden\n
                                        from sidekick\n
@@ -669,7 +699,7 @@
 
   (testing "Nested map multiplexed with value flattened"
     (with-routes!
-      {(route-request "/weapons") 
+      {(route-request "/weapons")
        (route-response {:swords [{:name "1"} {:name "2"}]
                         :types [{:typeId "7"} {:typeId "8"} {:typeId "9"}]
                         :source "MAGICAL"})
@@ -677,7 +707,7 @@
        (route-response {:ok "Yeap"})
        (route-request "/sidekick" {:weapon {:name ["1","2"] :typeId "8" :invisible false} :source "MAGICAL"})
        (route-response {:ok "Yeap"})
-       (route-request "/sidekick" {:weapon {:name ["1","2"] :typeId "9" :invisible false} :source "MAGICAL"}) 
+       (route-request "/sidekick" {:weapon {:name ["1","2"] :typeId "9" :invisible false} :source "MAGICAL"})
        (route-response {:ok "Yeap"})}
       (let [result (execute-query uri "from weapons hidden\n
                                        from sidekick\n
@@ -688,8 +718,8 @@
                                            typeId: weapons.types.typeId,\n
                                            invisible: false\n
                                          }")]
-        (is (= [{:ok "Yeap"}{:ok "Yeap"}{:ok "Yeap"}] (get-in result [:sidekick :result]))))))
-  
+        (is (= [{:ok "Yeap"} {:ok "Yeap"} {:ok "Yeap"}] (get-in result [:sidekick :result]))))))
+
   (testing "Nested map multiplexed flattened"
     (with-routes!
       {(route-request "/weapons")

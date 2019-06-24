@@ -187,9 +187,9 @@
 
     (merge forward-headers with-headers)))
 
-(defn- nil-header-to-empty-string [headers]
+(defn- empty-header-to-empty-string [headers]
   (into {} (map (fn [[k v]]
-                  [k (if (nil? v) "" v)]) headers)))
+                  [k (if (= :empty v) "" v)]) headers)))
 
 (defn decode
   [response]
@@ -198,9 +198,8 @@
   (update response :body #(-> (.parse js/JSON %)
                               (js->clj :keywordize-keys true))))
 
-(defn make-request [request query-opts]
-  (let [output-ch       (chan)
-        request         (parse-query-params request)
+(defn- make-request [request query-opts output-ch]
+  (let [request         (parse-query-params request)
         time-before     (.getTime (js/Date.))
         request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
         request-map        {:url                (:url request)
@@ -208,7 +207,7 @@
                             :content-type       "application/json"
                             :resource           (:from request)
                             :query-params       (valid-query-params request query-opts)
-                            :headers            (-> request (append-request-headers-to-query-opts query-opts) (nil-header-to-empty-string))
+                            :headers            (-> request (append-request-headers-to-query-opts query-opts) (empty-header-to-empty-string))
                             :time               time-before
                             :body               (some-> request :body json/encode)}
          ; Before Request hook
@@ -233,3 +232,21 @@
                                           :request-map request-map
                                           :before-hook-ctx before-hook-ctx)))
     output-ch))
+
+(defn- create-skip-message [params]
+  (str "The request was skipped due to missing {" (clojure.string/join ", " params) "} param value"))
+
+(defn- get-empty-params [request]
+  (->> request
+       (:query-params)
+       (keep (fn [[k v]] (when (= :empty v) k)))))
+
+(defn verify-and-make-request
+  [request query-opts]
+  (let [output-ch    (chan)
+        empty-params (get-empty-params request)]
+    (if (empty? empty-params)
+      (make-request request query-opts output-ch)
+      (do
+        (go (>! output-ch {:status 400 :body (create-skip-message empty-params)}))
+        output-ch))))

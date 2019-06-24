@@ -1,6 +1,6 @@
 (ns restql.core.runner.executor
   (:require [clojure.core.async :refer [go go-loop >! <!]]
-            [restql.core.runner.request :refer [make-request]])
+            [restql.core.runner.request :refer [verify-and-make-request]])
   #?(:clj (:use [slingshot.slingshot :only [try+]])))
 
 (defn- extract-result-keeping-channels-order [channels]
@@ -11,7 +11,7 @@
       result)))
 
 (defn- query-and-join [requests query-opts]
-  (let [operation (if (sequential? (first requests)) query-and-join make-request)]
+  (let [operation (if (sequential? (first requests)) query-and-join verify-and-make-request)]
     (->> requests
          (mapv #(operation % query-opts))
          (extract-result-keeping-channels-order))))
@@ -25,13 +25,13 @@
 (defn do-request [statements exception-ch {:keys [_debugging] :as query-opts}]
   #?(:clj (try+
            (if (single-request-not-multiplexed? statements)
-             (make-request (first statements) query-opts)
+             (verify-and-make-request (first statements) query-opts)
              (query-and-join statements query-opts))
            (catch Object e
              (go (>! exception-ch e))))
      :cljs (try
              (if (single-request-not-multiplexed? statements)
-               (make-request (first statements) query-opts)
+               (verify-and-make-request (first statements) query-opts)
                (query-and-join statements query-opts))
              (catch :default e
                (go (>! exception-ch e))))))
