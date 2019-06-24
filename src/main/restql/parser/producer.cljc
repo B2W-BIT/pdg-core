@@ -151,9 +151,10 @@
     :else (str "\"" value "\"")))
 
 (defn produce-variable [content]
-  (let [varname (join "" content)
-        value (get *restql-variables* varname)]
-    (format-variable value)))
+  (let [varname (join "" content)]
+    (if-not (contains? *restql-variables* varname)
+      :empty
+      (format-variable (get *restql-variables* varname)))))
 
 (defn produce-with-param-value-data [value-data]
   (produce (first value-data)))
