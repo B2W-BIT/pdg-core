@@ -5,6 +5,7 @@
 
 (defn- get-chained-params [chained]
   (cond
+    (and (sequential? chained) (sequential? (first chained))) [(get-chained-params (first chained))]
     (and (sequential? chained) (every? keyword? chained)) chained
     (map? chained) (->>
                     (map (fn [[k v]]
@@ -48,12 +49,14 @@
   (some? (meta object)))
 
 (defn- get-param-value [done-requests chain]
-  (->
-   (get-chain-value-from-done-requests chain done-requests)
-   (as-> value
-         (if (and (has-meta? chain) (meta-available? value))
-           (with-meta value (meta chain))
-           value))))
+  (if (sequential? (first chain))
+    [(get-param-value done-requests (first chain))]
+    (->
+     (get-chain-value-from-done-requests chain done-requests)
+     (as-> value
+           (if (and (has-meta? chain) (meta-available? value))
+             (with-meta value (meta chain))
+             value)))))
 
 (defn- assoc-value-to-param [done-requests [param-name chain]]
   (if (map? chain)
