@@ -114,4 +114,21 @@
              (pr-str {:from :resource-name :with {:id ^{:encoder :json} {} :name ["a" "b"]}}))
            (binding [*print-meta* true]
              (pr-str (resolve-chained-values {:from :resource-name :with {:id ^{:encoder :json} [:done-resource :id] :name ["a" "b"]}}
-                                             [[:done-resource {:body {:id {} :class "rest"}}]])))))))
+                                             [[:done-resource {:body {:id {} :class "rest"}}]]))))))
+
+  (testing "Returns a statement with chained param inside list"
+    (is (= {:from :resource-name :with {:weapon-class ["melee"]}}
+           (resolve-chained-values {:from :resource-name :with {:weapon-class [:done-resource :heroes :weapons :type :class]}}
+                                   [[:done-resource {:body {:heroes [{:weapons {:type {:class "melee"}}}]}}]])))
+
+    (is (= {:from :resource-name :with {:weapon-class [["melee"]]}}
+           (resolve-chained-values {:from :resource-name :with {:weapon-class [[:done-resource :heroes :weapons :type :class]]}}
+                                   [[:done-resource {:body {:heroes [{:weapons {:type {:class "melee"}}}]}}]])))
+
+    (is (= {:from :resource-name :with {:weapon-class [[]]}}
+           (resolve-chained-values {:from :resource-name :with {:weapon-class [[:done-resource :heroes :weapons :type :class]]}}
+                                   [[:done-resource {:body {:heroes []}}]])))
+
+    (is (= {:from :resource-name :with {:weapon-class [[[]]]}}
+           (resolve-chained-values {:from :resource-name :with {:weapon-class [[[:done-resource :heroes :weapons :type :class]]]}}
+                                   [[:done-resource {:body {:heroes []}}]])))))
