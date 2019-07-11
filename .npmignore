@@ -4,5 +4,4 @@ test
 .editorconfig
 .lein*
 .travis*
-node
 *.clj
