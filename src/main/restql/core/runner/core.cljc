@@ -1,5 +1,6 @@
 (ns restql.core.runner.core
   (:require [clojure.core.async :refer [go-loop go <! >! chan alt! timeout close!]]
+            [clojure.core.async.impl.protocols :refer [closed?] :rename {closed? chan-closed?}]
             [restql.log :as log]
             [clojure.set :as s]
             [restql.core.query :as query]
@@ -52,17 +53,16 @@
    then sends all to-dos to resolve, changing their statuses to :requested.
    As the results get ready, update the query status to :done and send all to-dos again.
    When all queries are :done, the process is complete, and the :done part of the state is returned."
-  [query {:keys [request-ch result-ch]}]
+  [query {:keys [request-ch result-ch output-ch exception-ch timeout-ch]}]
   (go-loop [state {:done [] :requested [] :to-do query}]
     (doseq [to-do (all-that-can-request state)]
-      (go
-        (>! request-ch {:to-do to-do :state state})))
+      (go (>! request-ch {:to-do to-do :state state})))
     (let [new-state (update-state state (<! result-ch))]
-      (if (all-done? new-state)
-        (do
-          (close! request-ch)
-          (:done new-state))
-        (recur new-state)))))
+      (cond
+        (all-done? new-state) (do (>! output-ch (:done new-state))
+                                  (mapv close! [request-ch result-ch output-ch exception-ch]))
+        (some chan-closed? [exception-ch timeout-ch]) (mapv close! [request-ch result-ch output-ch exception-ch])
+        :else (recur new-state)))))
 
 ; ######################################; ######################################
 
@@ -83,7 +83,7 @@
   #?(:clj (.toString (java.util.UUID/randomUUID))
      :cljs (.toString (uuid4))))
 
-(defn- build-and-execute [mappings encoders {:keys [to-do state]} exception-ch query-opts uuid result-ch]
+(defn- build-and-execute [mappings encoders {:keys [to-do state]} query-opts uuid result-ch exception-ch]
   (go
     (let [[query-name statement] to-do
           from (:from (second statement))
@@ -100,17 +100,17 @@
   [mappings encoders {:keys [request-ch result-ch exception-ch]} query-opts]
   (go-loop [next-req (<! request-ch)
             uuid  (generate-uuid!)]
-    (build-and-execute mappings encoders next-req exception-ch query-opts uuid result-ch)
-    (if-let [request (<! request-ch)]
-      (recur request uuid)
-      (close! result-ch))))
+    (build-and-execute mappings encoders next-req query-opts uuid result-ch exception-ch)
+    (let [request (<! request-ch)]
+      (when request (recur request uuid)))))
 
 ; ######################################; ######################################
 
-(defn run [mappings query encoders {:keys [_debugging] :as query-opts}]
+(defn run [mappings output-ch exception-ch timeout-ch query encoders {:keys [_debugging] :as query-opts}]
   (let [chans {:request-ch   (chan)
                :result-ch    (chan)
-               :exception-ch (chan)}]
+               :exception-ch exception-ch
+               :output-ch output-ch
+               :timeout-ch timeout-ch}]
     (make-requests mappings encoders chans query-opts)
-    [(do-run query chans)
-     (:exception-ch chans)]))
+    (do-run query chans)))

@@ -1,5 +1,5 @@
 (ns restql.core.runner.executor
-  (:require [clojure.core.async :refer [go go-loop >! <!]]
+  (:require [clojure.core.async :refer [go go-loop >! <! close!]]
             [restql.core.runner.request :refer [verify-and-make-request]])
   #?(:clj (:use [slingshot.slingshot :only [try+]])))
 
@@ -28,10 +28,14 @@
              (verify-and-make-request (first statements) query-opts)
              (query-and-join statements query-opts))
            (catch Object e
-             (go (>! exception-ch e))))
+             (go
+               (>! exception-ch {:type "exception" :message (.getMessage e) :exception e})
+               (close! exception-ch))))
      :cljs (try
              (if (single-request-not-multiplexed? statements)
                (verify-and-make-request (first statements) query-opts)
                (query-and-join statements query-opts))
              (catch :default e
-               (go (>! exception-ch e))))))
+               (go
+                 (>! exception-ch {:type "exception" :message (.getMessage e) :exception e})
+                 (close! exception-ch))))))

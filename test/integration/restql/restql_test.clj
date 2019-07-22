@@ -758,3 +758,63 @@
                                          } -> flatten")]
         (is (= {:ok "Yeap"} (get-in result [:sidekick :result])))))))
 
+(deftest with-global-timeout
+  (testing "If a global timeout occurs returns timeout error in result-ch."
+    (with-routes!
+      {"/hero" (hero-route)}
+      (is (= {:error :timeout}
+             (->
+              (restql/execute-query-channel :mappings {:hero (str uri "/hero")}
+                                            :encoders {}
+                                            :query (restql.parser.core/parse-query "from hero" :context {})
+                                            :query-opts {:global-timeout 1})
+              (first)
+              (clojure.core.async/<!!)))))))
+
+(deftest with-exception
+  (testing "If a exception occurs returns it in exception-ch."
+    (with-routes!
+      {"/hero" (hero-route)}
+      (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
+                    (fn [_] (throw (Exception. "exceptional")))]
+        (is (= "exception"
+               (->
+                (restql/execute-query-channel :mappings {:hero (str uri "/hero")}
+                                              :encoders {}
+                                              :query (restql.parser.core/parse-query "from hero" :context {})
+                                              :query-opts {})
+                (second)
+                (clojure.core.async/<!!)
+                :type)))))))
+
+(deftest stop-waiting-requests
+  (let [counter (atom 0)
+        encoders {}
+        mappings {:hero "http://0.0.0.0/hero" :sidekick "http://0.0.0.0/sidekick"}
+        query (restql.parser.core/parse-query "from hero \n from sidekick with id = hero.sidekickId")]
+    
+    (testing "If a exception occurs returns."
+      (reset! counter 0)
+      (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
+                    (fn [_] (do (swap! counter inc) (throw (Exception. "exceptional"))))]
+        (->>
+         (restql/execute-query-channel :mappings mappings
+                                       :encoders encoders
+                                       :query query
+                                       :query-opts {})
+         (reverse)
+         (mapv <!!))
+        (is (= 1 @counter))))
+
+    (testing "If a global timeout occurs."
+      (reset! counter 0)
+      (let [do-request restql.core.runner.executor/do-request]
+        (with-redefs [restql.core.runner.executor/do-request
+                      (fn [p1 p2 p3] (do (swap! counter inc) (do-request p1 p2 p3)))]
+          (->>
+           (restql/execute-query-channel :mappings mappings
+                                         :encoders encoders
+                                         :query query
+                                         :query-opts {:global-timeout 1})
+            (mapv <!!))
+          (is (= 1 @counter)))))))
