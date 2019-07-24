@@ -212,9 +212,9 @@
 
     (merge forward-headers with-headers)))
 
-(defn- empty-header-to-empty-string [headers]
+(defn- nil-header-to-empty-string [headers]
   (into {} (map (fn [[k v]]
-                  [k (if (= :empty v) "" v)]) headers)))
+                  [k (if (nil? v) "" v)]) headers)))
 
 (defn- build-request-map [request request-timeout valid-query-params headers time body-encoded poll-timeout]
 
@@ -226,14 +226,15 @@
    :request-timeout    request-timeout
    :read-timeout       request-timeout
    :query-params       valid-query-params
-   :headers            (empty-header-to-empty-string headers)
+   :headers            (nil-header-to-empty-string headers)
    :time               time
    :body               body-encoded
    :pool               client-connection-pool
    :pool-timeout       poll-timeout})
 
-(defn- make-request [request query-opts output-ch]
-  (let [request         (parse-query-params request)
+(defn make-request [request query-opts]
+  (let [output-ch       (chan)
+        request         (parse-query-params request)
         time-before     (System/currentTimeMillis)
         request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
         request-map (build-request-map
@@ -266,21 +267,3 @@
                                                     :before-hook-ctx before-hook-ctx))
         (d/success! 1))
     output-ch))
-
-(defn- create-skip-message [params]
-  (str "The request was skipped due to missing {" (clojure.string/join ", " params) "} param value"))
-
-(defn- get-empty-params [request]
-  (->> request
-       (:query-params)
-       (keep (fn [[k v]] (when (= :empty v) k)))))
-
-(defn verify-and-make-request
-  [request query-opts]
-  (let [output-ch    (chan)
-        empty-params (get-empty-params request)]
-    (if (empty? empty-params)
-      (make-request request query-opts output-ch)
-      (do
-        (go (>! output-ch {:status 400 :body (create-skip-message empty-params)}))
-        output-ch))))
