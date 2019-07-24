@@ -772,8 +772,8 @@
                                        :encoders encoders
                                        :query query
                                        :query-opts {})
-         (reverse)
-         (mapv <!!))
+         (second)
+         (<!!))
         (is (= 1 @counter))))
 
     (testing "If a global timeout occurs."
@@ -786,5 +786,6 @@
                                          :encoders encoders
                                          :query query
                                          :query-opts {:global-timeout 1})
-            (mapv <!!))
+           (first)
+           (<!!))
           (is (= 1 @counter)))))))

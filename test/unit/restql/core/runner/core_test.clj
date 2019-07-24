@@ -62,7 +62,7 @@
                     core/all-done? (fn [_] true)]
         (#'restql.core.runner.core/do-run nil chans)
         (is (= "Done" (<!! (:output-ch chans))))
-        (is (every? chan-closed? (map #(% chans) [:request-ch :result-ch :output-ch :exception-ch]))))))
+        (is (every? chan-closed? (map #(% chans) [:request-ch :result-ch :output-ch]))))))
 
   (testing "If exception-ch closes stop recur and close all remaining channels"
     (let [chans {:request-ch (chan)
@@ -87,4 +87,4 @@
                     core/update-state (fn [_ _] nil)
                     core/all-done? (fn [_] false)]
         (<!! (#'restql.core.runner.core/do-run nil chans))
-        (is (every? chan-closed? (map #(% chans) [:request-ch :result-ch :output-ch :exception-ch])))))))
+        (is (every? chan-closed? (map #(% chans) [:request-ch :result-ch :output-ch])))))))

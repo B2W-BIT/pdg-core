@@ -59,9 +59,9 @@
       (go (>! request-ch {:to-do to-do :state state})))
     (let [new-state (update-state state (<! result-ch))]
       (cond
-        (all-done? new-state) (do (>! output-ch (:done new-state))
-                                  (mapv close! [request-ch result-ch output-ch exception-ch]))
-        (some chan-closed? [exception-ch timeout-ch]) (mapv close! [request-ch result-ch output-ch exception-ch])
+        (all-done? new-state) (when (>! output-ch (:done new-state))
+                                (mapv close! [request-ch result-ch output-ch]))
+        (some chan-closed? [exception-ch timeout-ch]) (mapv close! [request-ch result-ch output-ch])
         :else (recur new-state)))))
 
 ; ######################################; ######################################
