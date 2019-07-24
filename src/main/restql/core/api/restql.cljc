@@ -8,7 +8,7 @@
             [restql.core.encoders.core :as encoders]
             [restql.parser.core :as parser]
             [clojure.walk :refer [stringify-keys]]
-            [clojure.core.async :refer [go go-loop  <! >! alt! alts! timeout]]
+            [clojure.core.async :refer [go chan <! alt! timeout]]
             [environ.core :refer [env]]
             #?(:clj [clojure.core.async :refer [<!!]]
                :cljs [promesa.core :as p]))
@@ -26,19 +26,17 @@
        (validator/validate context)
        (partition 2)))
 
-(defn- extract-result [parsed-query timeout-ch exception-ch query-ch query-opts]
+(defn- extract-result [parsed-query timeout-ch output-ch query-opts]
   (go
     (alt!
       timeout-ch ([]
                   {:error :timeout})
-      exception-ch ([err]
-                    err)
-      query-ch ([result]
-                (->> (response-builder/build (reduce (fn [res [key value]] (assoc res key value))
-                                                     {}
-                                                     result))
-                     (select (flatten parsed-query))
-                     (aggregation/aggregate parsed-query))))))
+      output-ch ([result]
+                 (->> (response-builder/build (reduce (fn [res [key value]] (assoc res key value))
+                                                      {}
+                                                      result))
+                      (select (flatten parsed-query))
+                      (aggregation/aggregate parsed-query))))))
 
 (defn get-default-encoders []
   (encoders/get-default-encoders))
@@ -58,10 +56,15 @@
         ; Executing query
         query-opts (set-default-query-options query-opts)
         parsed-query (parse-query {:mappings mappings :encoders encoders} query)
-        [output-ch exception-ch] (runner/run mappings parsed-query encoders query-opts)
-        parsed-ch (extract-result parsed-query (timeout (:global-timeout query-opts)) exception-ch output-ch query-opts)
+
+        output-ch (chan)
+        exception-ch (chan)
+        timeout-ch (timeout (:global-timeout query-opts))
+
+        _ (runner/run mappings output-ch exception-ch timeout-ch parsed-query encoders query-opts)
+        parsed-ch (extract-result parsed-query timeout-ch output-ch query-opts)
         return-ch (go
-                    (let [[query-result _] (alts! [parsed-ch exception-ch])
+                    (let [query-result (<! parsed-ch)
                           ; After query hook
                           _ (hook/execute-hook :after-query {:query-options query-opts
                                                              :query         query
