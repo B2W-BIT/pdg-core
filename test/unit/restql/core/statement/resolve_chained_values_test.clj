@@ -8,6 +8,15 @@
            (resolve-chained-values {:from :resource-name :with {:id 1}}
                                    {}))))
 
+  (testing "Returns a statement with :empty-chained as value if done-resource status code is not in 399 >= status >= 200"
+    (is (= {:from :resource-name, :with {:id :empty-chained}}
+           (resolve-chained-values {:from :resource-name :with {:id [:done-resource :id]}}
+                                   [[:done-resource {:status 422 :body "ERROR"}]])))
+
+    (is (= {:from :resource-name :with {:id [:empty-chained 2]}}
+           (resolve-chained-values {:from :resource-name :with {:id [:done-resource :id]}}
+                                   [[:done-resource [{:status 400 :body "ERROR"} {:body {:id 2}}]]]))))
+
   (testing "Returns a statement with single done resource value"
     (is (= {:from :resource-name :with {:id 1}}
            (resolve-chained-values {:from :resource-name :with {:id [:done-resource :id]}}

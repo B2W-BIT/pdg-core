@@ -232,9 +232,8 @@
    :pool               client-connection-pool
    :pool-timeout       poll-timeout})
 
-(defn make-request [request query-opts]
-  (let [output-ch       (chan)
-        request         (parse-query-params request)
+(defn- make-request [request query-opts output-ch]
+  (let [request         (parse-query-params request)
         time-before     (System/currentTimeMillis)
         request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
         request-map (build-request-map
@@ -267,3 +266,21 @@
                                                     :before-hook-ctx before-hook-ctx))
         (d/success! 1))
     output-ch))
+
+(defn- create-skip-message [params]
+  (str "The request was skipped due to missing {" (clojure.string/join ", " params) "} param value"))
+
+(defn- get-empty-chained-params [request]
+  (->> request
+       (:query-params)
+       (keep (fn [[k v]] (when (= :empty-chained v) k)))))
+
+(defn verify-and-make-request
+  [request query-opts]
+  (let [output-ch    (chan)
+        empty-chained-params (get-empty-chained-params request)]
+    (if (empty? empty-chained-params)
+      (make-request request query-opts output-ch)
+      (do
+        (go (>! output-ch {:status 400 :body (create-skip-message empty-chained-params)}))
+        output-ch))))
