@@ -3,7 +3,6 @@
             [restql.parser.core :refer :all]))
 
 (deftest testing-edn-string-production
-
   (testing "Testing simple query"
     (is (= (parse-query "from heroes as hero")
            [:hero {:from :heroes :method :get}])))
@@ -77,17 +76,17 @@
 
   (testing "Testing query params one chained parameter"
     (is (= (parse-query "from heroes as hero params id = player.id")
-           [:hero {:from :heroes :with {:id [:player :id]} :method :get}])))
+           [:hero {:from :heroes :method :get :with {:id [:player :id]}}])))
 
   (testing "Testing query params one chained parameter and metadata"
     (is (= (parse-query "from heroes as hero params id = player.id -> json")
-           [:hero {:from :heroes :with {:id ^{:encoder :json} [:player :id]} :method :get}])))
+           [:hero {:from :heroes :method :get :with {:id ^{:encoder :json} [:player :id]}}])))
 
   (testing "Testing query params one chained parameter and metadata"
     (is (= (binding [*print-meta* true]
              (pr-str (parse-query "from heroes as hero params id = player.id -> base64")))
            (binding [*print-meta* true]
-             (pr-str [:hero {:from :heroes :with {:id ^{:encoder :base64} [:player :id]} :method :get}])))))
+             (pr-str [:hero {:from :heroes :method :get :with {:id ^{:encoder :base64} [:player :id]}}])))))
 
   (testing "Testing query params headers"
     (is (= (parse-query "from heroes as hero headers Content-Type = \"application/json\" params id = 123")
@@ -103,27 +102,36 @@
 
   (testing "Testing query params only selection"
     (is (= (parse-query "from heroes as hero params id = 1 only id, name")
-           [:hero {:from :heroes :with {:id 1} :select #{:id :name} :method :get}])))
+           [:hero {:from :heroes :with {:id 1} :select [[:id] [:name]] :method :get}])))
 
   (testing "Testing query params only selection of inner elements"
     (is (= (parse-query "from heroes as hero params id = 1 only skills.id, skills.name, name")
-           [:hero {:from :heroes :with {:id 1} :select #{:name [:skills #{:id :name}]} :method :get}])))
+           [:hero {:from :heroes :method :get :with {:id 1} :select [[:skills :id] [:skills :name] [:name]]}])))
 
   (testing "Testing query params paramater params dot and chaining"
     (is (= (parse-query "from heroes as hero params weapon.id = weapon.id")
            [:hero {:from :heroes :with {:weapon.id [:weapon :id]} :method :get}])))
 
+  (testing "Testing simple with chaining variable"
+    (is (= (parse-query "from heroes with id = bla[$variable].ble, name = $name" :context {"variable" 1 "name" 2})
+           [:heroes {:from :heroes, :with {:id [:bla :1 :ble], :name 2}, :method :get}]))
+    (is (= (parse-query "from heroes with id = bla.$variable.ble, name = $name" :context {"variable" 1 "name" 2})
+           [:heroes {:from :heroes, :with {:id [:bla :1 :ble], :name 2}, :method :get}])))
+
   (testing "Testing query params only selection and a filter"
-    (is (= (parse-query "from heroes as hero params id = 1 only id, name -> matches(\"foo\")")
-           [:hero {:from :heroes :with {:id 1} :select #{:id [:name {:matches "foo"}]} :method :get}])))
+    (binding [*print-meta* true]
+      (is (= (parse-query "from heroes as hero params id = 1 only id, name -> matches(\"foo\")")
+             [:hero {:from :heroes :method :get :with {:id 1} :select [[:id] ^{:matches "foo"} [:name]]}]))))
 
   (testing "Testing query params only selection and a filter params wildcard"
-    (is (= (parse-query "from heroes as hero params id = 1 only id -> equals(1), *")
-           [:hero {:from :heroes :with {:id 1} :select #{[:id {:equals 1}] :*} :method :get}])))
+    (binding [*print-meta* true]
+      (is (= (pr-str  (parse-query "from heroes as hero params id = 1 only id -> equals(1), *"))
+             (pr-str  [:hero {:from :heroes :method :get :with {:id 1} :select [^{:equals 1} [:id] [:*]]}])))))
 
   (testing "Testing filter with variable"
-    (is (= (parse-query "from heroes as hero params id = 1 only id, name -> matches($name)" :context {"name" "Hero"})
-           [:hero {:from :heroes :with {:id 1} :select #{:id [:name {:matches "Hero"}]} :method :get}])))
+    (binding [*print-meta* true]
+      (is (= (pr-str (parse-query "from heroes as hero params id = 1 only id, name -> matches($name)" :context {"name" "Hero"}))
+             (pr-str [:hero {:from :heroes :method :get :with {:id 1} :select [[:id] ^{:matches "Hero"} [:name]]}])))))
 
   (testing "Testing full featured query"
     (binding [*print-meta* true]
@@ -136,19 +144,19 @@
                                                  only
                                                      id, name, cep, phone"))
              (pr-str [:products {:from         :product
-                                 :with-headers {"content-type" "application/json"}
+                                 :method :get
                                  :with         {:limit  ^{:expand false :encoder :json}
                                                 [:product :id]
                                                 :fields ["rating" "tags" "images" "groups"]}
-                                 :select       #{:id :name :cep :phone}
-                                 :method :get}]))))))
+                                 :select       [[:id] [:name] [:cep] [:phone]]
+                                 :with-headers {"content-type" "application/json"}}]))))))
 
 (deftest testing-cache
   (testing "Will not cache when ad-hoc query"
     (let [query-parser-cache-counter (atom 0)
           query-parser-counter (atom 0)]
-      (with-redefs [restql.parser.core/query-parser-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
-                    restql.parser.core/query-parser (fn [_] (do (swap! query-parser-counter inc) []))]
+      (with-redefs [restql.parser.core/parse-with-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
+                    restql.parser.query/from-text       (fn [_] (do (swap! query-parser-counter inc) []))]
         (parse-query "from heroes as hero" :query-type :ad-hoc)
         (parse-query "from heroes as hero" :query-type :ad-hoc)
         (is (= 0 @query-parser-cache-counter))
@@ -157,9 +165,9 @@
   (testing "Will cache when is NOT ad-hoc query"
     (let [query-parser-cache-counter (atom 0)
           query-parser-counter (atom 0)]
-      (with-redefs [restql.parser.core/query-parser-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
-                    restql.parser.core/query-parser (fn [_] (do (swap! query-parser-counter inc) []))]
+      (with-redefs [restql.parser.core/parse-with-cache (fn [_] (do (swap! query-parser-cache-counter inc) []))
+                    restql.parser.query/from-text       (fn [_] (do (swap! query-parser-counter inc) []))]
         (parse-query "from heroes as hero")
-        (parse-query "from heroes as hero" :query-type :saved)
+        (parse-query "from heroes as hero")
         (is (= 2 @query-parser-cache-counter))
         (is (= 0 @query-parser-counter))))))

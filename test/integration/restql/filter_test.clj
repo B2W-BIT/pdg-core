@@ -71,7 +71,7 @@
       (is (= nil      (:id (second (get-in response [:hero :result])))))
       (is (= "Robin"  (:name (second (get-in response [:hero :result]))))))))
 
-(deftest multiplex-with-list
+(deftest multiplex-with-list2
   (with-routes! {(test-util/route-request "/heroes")
                  (test-util/route-response {:heroes [{:id "B10"} {:id "B20"}]})
                  (test-util/route-request "/hero" {:id "B10"})

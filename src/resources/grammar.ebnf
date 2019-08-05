@@ -1,41 +1,103 @@
 Query =
    WS (UseBlock WS LS WS)? QueryBlock;
-
 UseBlock =
   UseRule (WS LS WS UseRule)*;
-
 UseRule =
-  KW_USE WS_MAND UseRuleKey WS EQUALS_SIGN WS UseRuleValue;
-
-UseRuleKey =
-  Identifier;
-
-UseRuleValue =
-  Primitive;
-
+  KW_USE WS_MAND ModifierBlock;
 QueryBlock =
   QueryItem (WS LS WS QueryItem)*;
-
 QueryItem =
-  WS FromRule (WS_MAND HeaderRule)?  (WS_MAND TimeoutRule)?  (WS_MAND WithRule)?  (WS_MAND (OnlyRule | HideRule))? (WS_MAND FlagsRule)? WS;
+  WS ActionRule (WS_MAND ModifierBlock)?  (WS_MAND WithRule)?  (WS_MAND (OnlyRule | HideRule))? (WS_MAND FlagsRule)? WS;
+ActionRule =
+  ActionRuleKey WS_MAND ActionRuleValue (WS_MAND KW_AS WS_MAND ActionRuleAlias)? (WS_MAND KW_IN WS_MAND ActionRuleIn)?;
+ActionRuleValue =
+  Identifier;
+ActionRuleAlias =
+  Identifier;
+ActionRuleIn =
+  Identifier;
+WithRule =
+  KW_WITH WS_MAND WithRuleItem (WS LS WS WithRuleItem)*;
+WithRuleItem =
+  (WithParamName WS EQUALS_SIGN WS WithParamValue | Variable);
+WithParamName =
+  QueryParameterName;
+WithParamValue =
+  WithParamValueData ModifierList;
+<WithParamValueData> =
+  (Chaining | ListParam | ComplexParam | Variable | Primitive);
+ListParam =
+  BEGIN_LIST WS END_LIST |
+  BEGIN_LIST WS WithParamValue ( WS LS WS WithParamValue )* END_LIST;
+ComplexParam =
+  BEGIN_OBJ WS END_OBJ |
+  BEGIN_OBJ WS ComplexParamItem ( WS OBJ_SEP WS ComplexParamItem)* WS END_OBJ;
+ComplexParamItem =
+  ComplexParamKey WS OBJ_PROP_SEP WS WithParamValue;
+ComplexParamKey =
+  Identifier | String;
+Chaining =
+  (PathItem | PathVariable) ((CHAINING_OPERATOR)? (PathItem | <"[">? PathVariable <"]">?))+;
 
-<FromRule> =
-  HttpMethod WS_MAND FromResource (WS_MAND KW_AS WS_MAND ResultAlias)? (WS_MAND KW_IN WS_MAND ResultIn)?;
+PathItem =
+  IdentifierWithoutDot;
 
-FromResource =
+PathVariable =
+  <"$"> IdentifierWithoutDot;
+
+Variable =
+  <"$"> Identifier;
+
+<QueryParameterName> =
   Identifier;
 
-ResultAlias =
+OnlyRule =
+  KW_ONLY WS_MAND OnlyRuleItem (WS LS WS OnlyRuleItem)*;
+
+OnlyRuleItem =
+  OnlyRuleItemName ModifierList;
+
+<OnlyRuleItemName> =
+  OnlyRuleItemPath (CHAINING_OPERATOR OnlyRuleItemPath)?+;
+
+OnlyRuleItemPath =
+  IdentifierWithoutDot | "*";
+
+ModifierList =
+  (WS MOD_OPERATOR WS Modifier)*;
+
+Modifier =
+  ModifierAlias | ModifierFunction;
+
+ModifierAlias =
   Identifier;
 
-ResultIn =
+ModifierFunction =
+  ModifierFunctionName OPEN_PARAMS CLOSE_PARAMS |
+  ModifierFunctionName OPEN_PARAMS ModifierFunctionArgList CLOSE_PARAMS;
+
+ModifierFunctionName =
   Identifier;
 
+ModifierFunctionArgList =
+  (WS ARGS_SEP? WS ModifierFunctionArg)*;
+<ModifierFunctionArg> =
+  Primitive | Variable;
+HideRule =
+  KW_HIDE;
+FlagsRule =
+  FlagRule (WS LS WS FlagRule)*;
+FlagRule =
+  IgnoreErrorsFlag;
+IgnoreErrorsFlag =
+  KW_IGNORE_ERRORS;
+ModifierBlock =
+  ((WS_MAND? TimeoutRule) | (WS_MAND? HeaderRule) | (WS_MAND? MaxAgeRule) | (WS_MAND? SMaxAgeRule))+;
 TimeoutRule =
-  KW_TIMEOUT WS_MAND TimeoutRuleValue;
+  KW_TIMEOUT WS EQUALS_SIGN? WS TimeoutRuleValue;
 
-TimeoutRuleValue =
-  Integer;
+<TimeoutRuleValue> =
+  Integer | Variable;
 
 HeaderRule =
   KW_HEADERS WS_MAND HeaderRuleItem (WS LS WS HeaderRuleItem)*;
@@ -44,122 +106,24 @@ HeaderRuleItem =
   HeaderName WS EQUALS_SIGN WS HeaderValue;
 
 HeaderName =
-  (Digit | Letter | "-" | "_")+;
+  Identifier;
 
 HeaderValue =
-  LiteralHeaderValue | Variable;
+  String | Variable;
 
-LiteralHeaderValue =
-  String;
+MaxAgeRule =
+  MaxAgeRuleKey WS EQUALS_SIGN? WS CacheControlRuleValue;
+SMaxAgeRule =
+  SMaxAgeRuleKey WS EQUALS_SIGN? WS CacheControlRuleValue;
 
-WithRule =
-  KW_WITH WS_MAND WithRuleItem (WS LS WS WithRuleItem)*;
+<MaxAgeRuleKey> =
+  <"cache-control"> | <"max-age">;
 
-WithRuleItem =
-  (WithParamName WS EQUALS_SIGN WS WithParamValue | Variable);
+<SMaxAgeRuleKey> =
+  <"s-max-age">;
 
-WithParamName =
-  QueryParameterName;
-
-WithParamValue =
-  WithParamValueData WithParamValueModifierList;
-
-WithParamValueData =
-  (WithParamPrimitiveValue | Chaining | ListParamValue | ComplexParamValue | Variable);
-
-WithParamValueModifierList =
-  (WS MOD_OPERATOR WS WithParamModifier)*;
-
-WithParamPrimitiveValue =
-  Primitive;
-
-ListParamValue =
-  BEGIN_LIST WS END_LIST |
-  BEGIN_LIST WS WithParamValue ( WS LS WS WithParamValue )* END_LIST;
-
-ComplexParamValue =
-  BEGIN_OBJ WS END_OBJ |
-  BEGIN_OBJ WS ComplexParamItem ( WS OBJ_SEP WS ComplexParamItem)* WS END_OBJ;
-
-ComplexParamItem =
-  ComplexParamKey WS OBJ_PROP_SEP WS WithParamValue;
-
-ComplexParamKey =
-  Identifier | String;
-
-Chaining =
-  PathItem (CHAINING_OPERATOR PathItem)+;
-
-Variable =
-  <"$"> Identifier;
-
-PathItem =
-  Identifier;
-
-<QueryParameterName> =
-  (Letter | Digit | "_" | "-" | "." | "|")+;
-
-WithParamModifier =
-  WithModifierAlias | WithModifierFunction;
-
-WithModifierAlias =
-  Identifier;
-
-WithModifierFunction =
-  WithModifierFunctionName OPEN_PARAMS CLOSE_PARAMS |
-  WithModifierFunctionName OPEN_PARAMS WithModifierFunctionArgList CLOSE_PARAMS;
-
-WithModifierFunctionName =
-  Identifier;
-
-WithModifierFunctionArgList =
-  WithModifierFunctionArg (WS ARGS_SEP WS WithModifierFunctionArg)*;
-
-WithModifierFunctionArg =
-  Primitive;
-
-OnlyRule =
-  KW_ONLY WS_MAND OnlyRuleItem (WS LS WS OnlyRuleItem)*;
-
-OnlyRuleItem =
-  OnlyRuleItemName OnlyRuleItemModifierList;
-
-OnlyRuleItemName =
-  OnlyRuleItemPath (CHAINING_OPERATOR OnlyRuleItemPath)*
-
-OnlyRuleItemPath =
-  Identifier | "*";
-
-OnlyRuleItemModifierList =
-  (WS MOD_OPERATOR WS OnlyRuleItemModifier)*;
-
-OnlyRuleItemModifier =
-  OnlyRuleItemModifierName WS OPEN_PARAMS WS CLOSE_PARAMS |
-  OnlyRuleItemModifierName WS OPEN_PARAMS WS OnlyRuleItemModifierArgList WS CLOSE_PARAMS;
-
-OnlyRuleItemModifierName =
-  Identifier;
-
-OnlyRuleItemModifierArgList =
-  OnlyRuleItemModifierArg (WS ARGS_SEP WS OnlyRuleItemModifierArg)* | OnlyRuleItemModifierArgVar;
-
-OnlyRuleItemModifierArg =
-  Primitive;
-
-OnlyRuleItemModifierArgVar =
-  Variable;
-
-HideRule =
-  KW_HIDE;
-
-FlagsRule =
-  FlagRule (WS LS WS FlagRule)*;
-
-FlagRule =
-  IgnoreErrorsFlag;
-
-IgnoreErrorsFlag =
-  KW_IGNORE_ERRORS;
+<CacheControlRuleValue> =
+  Integer | Variable;
 
 <KW_USE> =
   <"use">;
@@ -167,14 +131,14 @@ IgnoreErrorsFlag =
 <KW_METHOD> =
   ("from" | "to" | "into" | "delete" | "update");
 
-HttpMethod =
+ActionRuleKey =
   KW_METHOD;
 
 <KW_AS> =
   <"as">;
 
 <KW_IN> =
-  <"in">;  
+  <"in">;
 
 <KW_HEADERS> =
   <"headers">;
@@ -231,80 +195,59 @@ HttpMethod =
   <",">;
 
 <Identifier> =
-  Letter (Digit | Letter | "-" | "_" | ".")*;
+  #'[a-zA-Z0-9-_.]*';
+
+<IdentifierWithoutDot> =
+  #'[a-zA-Z0-9-_]*';
 
 <Primitive> =
-  String | Number | Boolean | Null;
+  Number | String | Boolean | Null;
 
-<String> =
-  Quote StringChar* Quote;
-
+String =
+  #"\".*?\"";
 <Boolean> =
   True | False;
-
 True =
   <"true">;
-
 False =
   <"false">;
-
 Null =
   <"null">;
-
 <Number> =
   Integer | Float;
-
-
-<Integer> =
- "-"? ("0" | #"[1-9]\d*");
-
-<Float> =
-  "-"? ( "0.0" | Integer "." Digit+ );
-
+Integer =
+ #'[-+]?\d+';
+Float =
+  #'[+-]?(?=\d*[.eE])(?=\.?\d)\d*\.?\d*(?:[eE][+-]?\d+)?';
 <StringChar> =
   Unescaped;
-
 <Unescaped> =
   #"[^\x00-\x1F\x22\x5C]";
-
 <Quote> =
   "\"";
-
 <Digit> =
   #"\d";
-
 <Letter> =
   #"[A-z]";
-
 <NL> =
   <"\n">;
-
 (*List Separator*)
 <LS> =
   NL | <","> | Comment;
-
 (*White Space*)
 <WS> =
   (SPACE | Comment)*;
-
 <WS_MAND> =
   (SPACE | Comment | NL)+;
-
 <SPACE> =
   <#"\s">;
-
 <Comment> =
   BEGIN_COMMENT <CommentText> END_COMMENT;
-
 <BEGIN_COMMENT> =
   < "//" >;
-
 <END_COMMENT> =
   < #"\n" >;
-
 <CommentChar> =
   #"[^\x00-\x1F\n]";
-
 <CommentText> =
   CommentChar* ;
-

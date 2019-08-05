@@ -48,7 +48,7 @@
 (defn is-valid-select [value]
   (or
    (= :none value)
-   (set? value)))
+   (vector? value)))
 
 #?(:clj (defn is-valid-url [url]
           (try+
