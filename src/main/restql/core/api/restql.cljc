@@ -1,7 +1,7 @@
 (ns restql.core.api.restql
   (:require [restql.core.runner.core :as runner]
             [restql.core.validator.core :as validator]
-            [restql.core.transformations.select :refer [select]]
+            [restql.core.transformations.select :as select]
             [restql.core.transformations.aggregation :as aggregation]
             [restql.hooks.core :as hook]
             [restql.core.api.response-builder :as response-builder]
@@ -21,8 +21,8 @@
 (defn get-default [key]
   (if (contains? env key) (read-string (env key)) (default-values key)))
 
-(defn- parse-query [context string]
-  (->> string
+(defn- parse-query [context query-parsed]
+  (->> query-parsed
        (validator/validate context)
        (partition 2)))
 
@@ -35,7 +35,7 @@
                  (->> (response-builder/build (reduce (fn [res [key value]] (assoc res key value))
                                                       {}
                                                       result))
-                      (select (flatten parsed-query))
+                      (select/from-result (flatten parsed-query))
                       (aggregation/aggregate parsed-query))))))
 
 (defn get-default-encoders []

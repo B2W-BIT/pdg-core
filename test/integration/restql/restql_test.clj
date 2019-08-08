@@ -386,11 +386,11 @@
     (with-routes!
       {"/hero" (hero-route)
        "/sidekick" (sidekick-route)}
-      (let [result (execute-query uri 
+      (let [result (execute-query uri
                                   "from hero\n from sidekick with name = hero.missing_param")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status]))))))
-  
+
   (testing "Chained request with nil param should not be skipped"
     (with-routes!
       {"/hero" (hero-route)
@@ -400,7 +400,7 @@
                                   {:id nil})]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status]))))))
-  
+
   (testing "Chained request should be skipped if parent request status code > 399 or < 200"
     (with-routes!
       {"/hero" (assoc (hero-route) :status 500)
@@ -795,30 +795,32 @@
         encoders {}
         mappings {:hero "http://0.0.0.0/hero" :sidekick "http://0.0.0.0/sidekick"}
         query (restql.parser.core/parse-query "from hero \n from sidekick with id = hero.sidekickId")]
-    
+
     (testing "If a exception occurs returns."
       (reset! counter 0)
       (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
                     (fn [_] (do (swap! counter inc) (throw (Exception. "exceptional"))))]
-        (->>
-         (restql/execute-query-channel :mappings mappings
-                                       :encoders encoders
-                                       :query query
-                                       :query-opts {})
-         (second)
-         (<!!))
-        (is (= 1 @counter))))
+        (do
+          (->>
+           (restql/execute-query-channel :mappings mappings
+                                         :encoders encoders
+                                         :query query
+                                         :query-opts {})
+           (second)
+           (<!!))
+          (is (= 1 @counter)))))
 
     (testing "If a global timeout occurs."
       (reset! counter 0)
       (let [do-request restql.core.runner.executor/do-request]
         (with-redefs [restql.core.runner.executor/do-request
                       (fn [p1 p2 p3] (do (swap! counter inc) (do-request p1 p2 p3)))]
-          (->>
-           (restql/execute-query-channel :mappings mappings
-                                         :encoders encoders
-                                         :query query
-                                         :query-opts {:global-timeout 1})
-           (first)
-           (<!!))
-          (is (= 1 @counter)))))))
+          (do
+            (->>
+             (restql/execute-query-channel :mappings mappings
+                                           :encoders encoders
+                                           :query query
+                                           :query-opts {:global-timeout 1})
+             (first)
+             (<!!))
+            (is (= 1 @counter))))))))

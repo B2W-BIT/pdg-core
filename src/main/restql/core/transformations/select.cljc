@@ -1,60 +1,70 @@
 (ns restql.core.transformations.select
-  (:require [restql.core.transformations.filters :as filters]))
+  (:require [restql.core.transformations.filters :as filters]
+            [restql.core.util.deep-merge :refer [deep-merge]]
+            [restql.core.util.get-in-with-list-support :refer [get-in-with-list-support]]))
 
-(defn- select-keyword [select-param entity-value]
-  (get entity-value select-param))
+(defn apply-filters [value filters]
+  (if (nil? filters)
+    value
+    (filters/apply-to-value value filters)))
 
-(declare do-selection)
+(defn- select-rules [query resource-name]
+  (->> query
+       (apply assoc {})
+       (resource-name)
+       (:select)))
 
-(defn- apply-filters [filter-data entity-value]
-  (if (seq filter-data)
-    (filters/apply-filters entity-value filter-data)
-    entity-value))
+(defn- select-all? [selection-rules]
+  (->> selection-rules
+       (some #(= :* (first %)))))
 
-(defn- select-expression [[select-key & select-params] entity-value]
-  (let [entity-item (get entity-value select-key)
-        subselect (->> select-params (filter set?) first)
-        filters (filter map? select-params)
-        filtered-items (apply-filters filters entity-item)]
-    (if (nil? subselect)
-      filtered-items
-      (do-selection subselect filtered-items))))
+(defn- initial-result [selection-rules resource-result]
+  (cond
+    (select-all? selection-rules) resource-result
+    (sequential? resource-result) []
+    :else {}))
 
-(defn- contains-wildcard? [select-params]
-  (if (set? select-params)
-    (some #(= :* %) select-params)
-    false))
+(defn select-item
+  ([raw-result selector] (select-item raw-result selector (meta selector)))
+  ([raw-result selector filters]
+   (cond
+     (= [:*] selector)        {}
+     (sequential? raw-result) (->> raw-result (map #(select-item % selector filters)) (filter some?) vec)
+     (map? raw-result)        (-> selector first raw-result (select-item (rest selector) filters) (as-> val (if (nil? val) nil {(first selector) val})))
+     :else                    (apply-filters raw-result filters))))
 
-(defn- select-single [select-params entity-value]
-  (reduce (fn [result select-param]
-            (cond
-              (= :* select-param) result
-              (keyword? select-param) (assoc result select-param (select-keyword select-param entity-value))
-              (vector? select-param) (assoc result (first select-param) (select-expression select-param entity-value))
-              :else result))
-          (if (contains-wildcard? select-params) entity-value {})
-          select-params))
+(defn- merge-selects [r1 r2]
+  (cond
+    (empty? r1) r2
+    (and (sequential? r1) (sequential? r2)) (vec (map merge-selects r1 r2))
+    (and (map? r1) (map? r2)) (deep-merge r1 r2)
+    :else r2))
 
-(defn- do-selection [fields-to-select result]
-  (if (sequential? result)
-    (map #(do-selection fields-to-select %) result)
-    (select-single fields-to-select result)))
+(defn- filter-result [raw-result filtered-result select-rule]
+  (->> select-rule
+       (select-item raw-result)
+       (merge-selects filtered-result)))
 
-(defn- filter-resource-response [fields-to-select resource-response]
-  (->> resource-response
-       (:result)
-       (do-selection fields-to-select)
-       (assoc {} :result)
-       (merge {:details (:details resource-response)})))
+(defn- resource-filtered [selection-rules resource-name resource-data]
+  (let [result (:result resource-data)
+        initial (initial-result selection-rules result)]
+    (->> selection-rules
+         (reduce (partial filter-result result) initial)
+         (assoc-in resource-data [:result])
+         (conj [resource-name]))))
 
-(defn- reduce-with [query]
-  (fn [acc resource resource-response]
-    (let [select-params (:select (resource query))]
-      (cond
-        (set? select-params) (assoc acc resource (filter-resource-response select-params resource-response))
-        (= :none select-params) acc
-        :else (assoc acc resource resource-response)))))
+(defn- resource-hidden? [selection-rules]
+  (= :none selection-rules))
 
-(defn select [query result]
-  (let [query-map (apply hash-map query)]
-    (reduce-kv (reduce-with query-map) {} result)))
+(defn- resource-selection [query resource-response]
+  (let [[name data] resource-response
+        selection-rules (select-rules query name)]
+    (cond
+      (nil? selection-rules) resource-response
+      (resource-hidden? selection-rules) nil
+      :else (resource-filtered selection-rules name data))))
+
+(defn from-result [query result]
+  (->> result
+       (map (partial resource-selection query))
+       (into {})))
