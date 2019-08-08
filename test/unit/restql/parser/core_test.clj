@@ -1,6 +1,7 @@
 (ns restql.parser.core-test
   (:require [clojure.test :refer :all]
-            [restql.parser.core :refer :all]))
+            [restql.parser.core :refer :all]
+            [slingshot.test :refer :all]))
 
 (deftest testing-edn-string-production
   (testing "Testing simple query"
@@ -150,6 +151,14 @@
                                                 :fields ["rating" "tags" "images" "groups"]}
                                  :select       [[:id] [:name] [:cep] [:phone]]
                                  :with-headers {"content-type" "application/json"}}]))))))
+
+(deftest invalid-format
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query nil :query-type :ad-hoc)))
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query {} :query-type :ad-hoc)))
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query [] :query-type :ad-hoc))))
 
 (deftest testing-cache
   (testing "Will not cache when ad-hoc query"
