@@ -1,8 +1,9 @@
 (ns restql.parser.query
-  (:require [instaparse.core :as insta :refer [defparser]]
-            #?(:clj [clojure.java.io :as io]
-               :cljs ["fs"])
+  (:require #?(:clj [instaparse.core :as insta :refer [defparser]])
+            #?(:clj [clojure.java.io :as io])
             #?(:clj [slingshot.slingshot :refer [throw+]])
+            #?(:cljs [instaparse.core :as insta :refer-macros [defparser]])
+            #?(:cljs ["fs"])
             #?(:cljs ["path"])))
 
 #?(:clj  (defparser to-tree

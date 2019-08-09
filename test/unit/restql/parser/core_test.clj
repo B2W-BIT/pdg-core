@@ -1,6 +1,7 @@
 (ns restql.parser.core-test
   (:require [clojure.test :refer :all]
-            [restql.parser.core :refer :all]))
+            [restql.parser.core :refer :all]
+            [slingshot.test :refer :all]))
 
 (deftest testing-edn-string-production
   (testing "Testing simple query"
@@ -45,6 +46,10 @@
   (testing "Testing query params one numeric parameter"
     (is (= (parse-query "from heroes as hero params id = 123")
            [:hero {:from :heroes :with {:id 123} :method :get}])))
+
+  (testing "Testing query params one numeric parameter"
+    (is (= (parse-query "from heroes as hero params id = 123, \n name = \"hero\"")
+           [:hero {:from :heroes :with {:id 123, :name "hero"} :method :get}])))
 
   (testing "Testing query params one string parameter"
     (is (= (parse-query "from heroes as hero params id = \"123\"")
@@ -108,6 +113,10 @@
     (is (= (parse-query "from heroes as hero params id = 1 only skills.id, skills.name, name")
            [:hero {:from :heroes :method :get :with {:id 1} :select [[:skills :id] [:skills :name] [:name]]}])))
 
+  (testing "Testing simple query"
+    (is (= (parse-query "use timeout 100 \n from resource \n only \n sortBy \n attr.id")
+           [:resource {:from :resource, :method :get, :select [[:sortBy] [:attr :id]]}])))
+
   (testing "Testing query params paramater params dot and chaining"
     (is (= (parse-query "from heroes as hero params weapon.id = weapon.id")
            [:hero {:from :heroes :with {:weapon.id [:weapon :id]} :method :get}])))
@@ -150,6 +159,14 @@
                                                 :fields ["rating" "tags" "images" "groups"]}
                                  :select       [[:id] [:name] [:cep] [:phone]]
                                  :with-headers {"content-type" "application/json"}}]))))))
+
+(deftest invalid-format
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query nil :query-type :ad-hoc)))
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query {} :query-type :ad-hoc)))
+  (is (thrown+? #(= (:message %) "Parser error: invalid query format")
+                (parse-query [] :query-type :ad-hoc))))
 
 (deftest testing-cache
   (testing "Will not cache when ad-hoc query"
