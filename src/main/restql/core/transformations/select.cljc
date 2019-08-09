@@ -37,7 +37,7 @@
   (cond
     (empty? r1) r2
     (and (sequential? r1) (sequential? r2)) (vec (map merge-selects r1 r2))
-    (and (map? r1) (map? r2)) (deep-merge r1 r2)
+    (and (map? r1) (map? r2)) (merge-with merge-selects r1 r2)
     :else r2))
 
 (defn- filter-result [raw-result filtered-result select-rule]
