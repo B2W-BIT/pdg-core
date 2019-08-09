@@ -124,6 +124,7 @@
        (filter #(not= (:tag %) :ModifierList))
        (map #(-> % :content))
        (flatten)
+       (filter #(not (clojure.string/blank? %)))
        (map keyword)
        (into [])
        (with-modifier-functions context query-select-tag)))
@@ -134,6 +135,7 @@
        (:content)
        (map :content)
        (map (partial resource-select-filter context))
+       (filter #(not (empty? %)))
        (into [])))
 
 (defn- resource-hidden [query-item]

@@ -47,6 +47,10 @@
     (is (= (parse-query "from heroes as hero params id = 123")
            [:hero {:from :heroes :with {:id 123} :method :get}])))
 
+  (testing "Testing query params one numeric parameter"
+    (is (= (parse-query "from heroes as hero params id = 123, \n name = \"hero\"")
+           [:hero {:from :heroes :with {:id 123, :name "hero"} :method :get}])))
+
   (testing "Testing query params one string parameter"
     (is (= (parse-query "from heroes as hero params id = \"123\"")
            [:hero {:from :heroes :with {:id "123"} :method :get}])))
@@ -108,6 +112,10 @@
   (testing "Testing query params only selection of inner elements"
     (is (= (parse-query "from heroes as hero params id = 1 only skills.id, skills.name, name")
            [:hero {:from :heroes :method :get :with {:id 1} :select [[:skills :id] [:skills :name] [:name]]}])))
+
+  (testing "Testing simple query"
+    (is (= (parse-query "use timeout 100 \n from resource \n only \n sortBy \n attr.id")
+           [:resource {:from :resource, :method :get, :select [[:sortBy] [:attr :id]]}])))
 
   (testing "Testing query params paramater params dot and chaining"
     (is (= (parse-query "from heroes as hero params weapon.id = weapon.id")
