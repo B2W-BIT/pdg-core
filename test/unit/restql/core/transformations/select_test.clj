@@ -93,7 +93,23 @@
                  :result {:top {:foo 1 :bar {:deepbar 2}}}}}
          (select/from-result [:data {:select [[:top :foo] [:top :bar :deepbar]]}]
                              {:data {:details {:status 200 :success true}
-                                     :result {:top {:foo 1 :bar {:deepbar 2 :any 3} :another 4}}}}))))
+                                     :result {:top {:foo 1 :bar {:deepbar 2 :any 3} :another 4}}}})))
+  (is (= {:heroes {:details {:status 200 :success true}
+                   :result [{:id "B10"} {:id "B20"}]}
+          :hero {:details [{:status 200 :success true}
+                           {:success true :status 200}]
+                 :result {:attr [{:name "Batman" :id "B10"}]}}}
+         (select/from-result [:heroes {:from :heroes
+                                       :method :get}
+                              :hero   {:from :hero
+                                       :method :get
+                                       :with {:id [:heroes :id]}
+                                       :select [[:attr :name] ^{:equals "B10"} [:attr :id]]}]
+                             {:heroes {:details {:status 200 :success true}
+                                       :result [{:id "B10"} {:id "B20"}]}
+                              :hero {:details [{:status 200 :success true}
+                                               {:success true, :status 200}]
+                                     :result {:attr [{:name "Batman", :id "B10"} {:name "Robin", :id "B20"}]}}}))))
 
 (deftest testing-simple-filter
   (is (= {:data {:details {:status 200 :success true}
@@ -132,22 +148,3 @@
                              {:data {:details {:status 200 :success true}
                                      :result {:foo [{:text "abc"}
                                                     {:text "xyz"}]}}}))))
-
-(deftest bla
-  (is (= {:heroes {:details {:status 200 :success true}
-                   :result [{:id "B10"} {:id "B20"}]}
-          :hero {:details [{:status 200 :success true}
-                           {:success true :status 200}]
-                 :result [[{:name "Batman" :id "B10"}]
-                          [{:name "Robin" :id "B20"}]]}}
-         (select/from-result [:heroes {:from :heroes
-                                       :method :get}
-                              :hero   {:from :hero
-                                       :method :get
-                                       :with {:id [:heroes :id]}
-                                       :select [[:name] [:id]]}]
-                             {:heroes {:details {:status 200 :success true}
-                                       :result [{:id "B10"} {:id "B20"}]}
-                              :hero {:details [{:status 200 :success true}
-                                               {:success true, :status 200}]
-                                     :result [[{:name "Batman", :id "B10"}] [{:name "Robin", :id "B20"}]]}}))))
