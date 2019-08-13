@@ -21,7 +21,7 @@
 (defn get-default [key]
   (if (contains? env key) (read-string (env key)) (default-values key)))
 
-(defn- parse-query [context query-parsed]
+(defn- validate-query [context query-parsed]
   (->> query-parsed
        (validator/validate context)
        (partition 2)))
@@ -45,6 +45,11 @@
   (into {:timeout        (get-default :query-resource-timeout)
          :global-timeout (get-default :query-global-timeout)} query-options))
 
+(defn- query-timeout [parsed-query query-opts]
+  (if-let [timeout (-> parsed-query meta :timeout)]
+    timeout
+    (:global-timeout query-opts)))
+
 (defn execute-query-channel [& {:keys [mappings encoders query query-opts]}]
   (let [; Before query hook
         _ (hook/execute-hook :before-query {:query query
@@ -55,14 +60,14 @@
 
         ; Executing query
         query-opts (set-default-query-options query-opts)
-        parsed-query (parse-query {:mappings mappings :encoders encoders} query)
+        validated-query (validate-query {:mappings mappings :encoders encoders} query)
 
         output-ch (chan)
         exception-ch (chan)
-        timeout-ch (timeout (:global-timeout query-opts))
+        timeout-ch (timeout (query-timeout query query-opts))
 
-        _ (runner/run mappings output-ch exception-ch timeout-ch parsed-query encoders query-opts)
-        parsed-ch (extract-result parsed-query timeout-ch output-ch query-opts)
+        _ (runner/run mappings output-ch exception-ch timeout-ch validated-query encoders query-opts)
+        parsed-ch (extract-result validated-query timeout-ch output-ch query-opts)
         return-ch (go
                     (let [query-result (<! parsed-ch)
                           ; After query hook
