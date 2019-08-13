@@ -808,7 +808,7 @@
                                          :query-opts {})
            (second)
            (<!!))
-          (is (= 1 @counter)))))
+          (is (> 2 @counter)))))
 
     (testing "If a global timeout occurs."
       (reset! counter 0)
@@ -823,4 +823,4 @@
                                            :query-opts {:global-timeout 1})
              (first)
              (<!!))
-            (is (= 1 @counter))))))))
+            (is (> 2 @counter))))))))
