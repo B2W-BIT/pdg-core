@@ -114,8 +114,9 @@
            [:hero {:from :heroes :method :get :with {:id 1} :select [[:skills :id] [:skills :name] [:name]]}])))
 
   (testing "Testing simple query"
-    (is (= (parse-query "use timeout 100 \n from resource \n only \n sortBy \n attr.id")
-           [:resource {:from :resource, :method :get, :select [[:sortBy] [:attr :id]]}])))
+    (binding [*print-meta* true]
+      (is (= (pr-str (parse-query "use timeout 100 \n from resource \n only \n sortBy \n attr.id"))
+             (pr-str ^{:timeout 100} [:resource {:from :resource, :method :get, :select [[:sortBy] [:attr :id]]}])))))
 
   (testing "Testing query params paramater params dot and chaining"
     (is (= (parse-query "from heroes as hero params weapon.id = weapon.id")

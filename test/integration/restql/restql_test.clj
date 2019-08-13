@@ -312,13 +312,6 @@
       (is (= [{:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]}
               {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]}] result)))))
 
-(deftest timeout-request-should-return-408
-  (with-routes!
-    {"/hero" (assoc (hero-route) :delay 500)}
-    (let [result (execute-query uri "from hero timeout 100")]
-      (is (= 408 (get-in result [:hero :details :status])))
-      (is (= {:message "RequestTimeoutException"} (get-in result [:hero :result]))))))
-
 (deftest chained-call
   (with-routes! {"/hero" (hero-route) "/sidekick" (sidekick-route)}
     (let [result (execute-query uri "from hero\nfrom sidekick")]
@@ -340,18 +333,7 @@
     (is (= "http://not.a.working.endpoint" (get-in result [:fail :details :debug :url])))
     (is (= 5000 (get-in result [:fail :details :debug :timeout])))))
 
-(deftest shouldnt-throw-exeption-if-chainned-resource-timeout-and-ignore-error
-  (with-routes!
-    {"/hero" (hero-route)}
-    {"/sideck" (assoc (sidekick-route) :delay 200)}
-    (let [result (execute-query uri "from hero\nfrom sidekick timeout 100 with id = hero.sidekickId ignore-errors")]
-      (is (= 200 (get-in result [:hero :details :status])))
-      (is (= {:hi "I'm hero", :sidekickId "A20" :villains ["1" "2"] :weapons ["pen" "papel clip"]} (get-in result [:hero :result])))
-      (is (= 408 (get-in result [:sidekick :details :status])))
-      (is (not (nil? (get-in result [:sidekick :result :message])))))))
-
 (deftest request-with-overlapping-headers
-
   (testing "Query without query headers"
     (with-routes!
       {(route-header "/hero" {"test" "test"})
@@ -761,18 +743,7 @@
                                          } -> flatten")]
         (is (= {:ok "Yeap"} (get-in result [:sidekick :result])))))))
 
-(deftest with-global-timeout
-  (testing "If a global timeout occurs returns timeout error in result-ch."
-    (with-routes!
-      {"/hero" (hero-route)}
-      (is (= {:error :timeout}
-             (->
-              (restql/execute-query-channel :mappings {:hero (str uri "/hero")}
-                                            :encoders {}
-                                            :query (restql.parser.core/parse-query "from hero" :context {})
-                                            :query-opts {:global-timeout 1})
-              (first)
-              (clojure.core.async/<!!)))))))
+
 
 (deftest with-exception
   (testing "If a exception occurs returns it in exception-ch."
@@ -808,19 +779,4 @@
                                          :query-opts {})
            (second)
            (<!!))
-          (is (> 2 @counter)))))
-
-    (testing "If a global timeout occurs."
-      (reset! counter 0)
-      (let [do-request restql.core.runner.executor/do-request]
-        (with-redefs [restql.core.runner.executor/do-request
-                      (fn [p1 p2 p3] (do (swap! counter inc) (do-request p1 p2 p3)))]
-          (do
-            (->>
-             (restql/execute-query-channel :mappings mappings
-                                           :encoders encoders
-                                           :query query
-                                           :query-opts {:global-timeout 1})
-             (first)
-             (<!!))
-            (is (> 2 @counter))))))))
+          (is (> 2 @counter)))))))
