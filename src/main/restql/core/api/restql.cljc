@@ -8,7 +8,7 @@
             [restql.core.encoders.core :as encoders]
             [restql.parser.core :as parser]
             [clojure.walk :refer [stringify-keys]]
-            [clojure.core.async :refer [go chan <! alt! timeout]]
+            [clojure.core.async :refer [go chan <! alt! timeout mix admix]]
             [environ.core :refer [env]]
             #?(:clj [clojure.core.async :refer [<!!]]
                :cljs [promesa.core :as p]))
@@ -81,12 +81,16 @@
 
 #?(:clj
    (defn execute-parsed-query [& {:keys [mappings encoders query query-opts]}]
-     (let [[result-ch _exception-ch] (execute-query-channel :mappings mappings
-                                                            :encoders encoders
-                                                            :query query
-                                                            :query-opts query-opts)
-           result (<!! result-ch)]
-       result)))
+     (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+                                                           :encoders encoders
+                                                           :query query
+                                                           :query-opts query-opts)
+           response-ch (chan)
+           response-mix (mix response-ch)]
+       (do
+         (admix response-mix result-ch)
+         (admix response-mix exception-ch)
+         (<!! response-ch)))))
 
 #?(:clj
    (defn execute-query [& {:keys [mappings encoders query params options]}]
@@ -98,12 +102,18 @@
 
 (defn execute-parsed-query-async [& {:keys [mappings encoders query query-opts callback]}]
   (go
-    (let [[result-ch _exception-ch] (execute-query-channel :mappings mappings
-                                                           :encoders encoders
-                                                           :query query
-                                                           :query-opts query-opts)
-          result (<! result-ch)]
-      (callback result))))
+    (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+                                                          :encoders encoders
+                                                          :query query
+                                                          :query-opts query-opts)
+          response-ch (chan)
+          response-mix (mix response-ch)]
+      (do
+        (admix response-mix result-ch)
+        (admix response-mix exception-ch)
+        (-> response-ch
+            (<!)
+            (callback))))))
 
 #?(:clj (defn execute-query-async [& {:keys [mappings encoders query params options callback]}]
           (let [parsed-query (parser/parse-query query :context (stringify-keys params))]
