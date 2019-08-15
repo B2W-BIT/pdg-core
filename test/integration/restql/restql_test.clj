@@ -743,10 +743,8 @@
                                          } -> flatten")]
         (is (= {:ok "Yeap"} (get-in result [:sidekick :result])))))))
 
-
-
 (deftest with-exception
-  (testing "If a exception occurs returns it in exception-ch."
+  (testing "If an exception occurs returns it in exception-ch."
     (with-routes!
       {"/hero" (hero-route)}
       (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
@@ -759,7 +757,25 @@
                                               :query-opts {})
                 (second)
                 (clojure.core.async/<!!)
-                :type)))))))
+                :type))))))
+  
+  (testing "If an exception occurs returns it"
+    (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
+                  (fn [_] (throw (Exception. "exceptional")))]
+      (is (= "exception"
+             (:type (execute-query "http://0.0.0.0" "from hero"))))))
+
+  (testing "If an exception occurs pass it to the callback"
+    (with-redefs [restql.core.runner.executor/single-request-not-multiplexed?
+                  (fn [_] (throw (Exception. "exceptional")))]
+      (let [p (promise)]
+        (restql/execute-query-async :mappings {:hero "http://0.0.0.0/hero"}
+                                    :encoders {}
+                                    :query "from hero"
+                                    :params {}
+                                    :callback (fn [v] (deliver p v)))
+        (is (= "exception"
+               (:type @p)))))))
 
 (deftest stop-waiting-requests
   (let [counter (atom 0)
