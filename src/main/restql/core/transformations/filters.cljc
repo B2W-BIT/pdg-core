@@ -1,10 +1,17 @@
-(ns restql.core.transformations.filters)
+(ns restql.core.transformations.filters
+  (:require [restql.log :as log]))
 
 (defn- filter-match [arg data]
-  (->> data
-       str
-       (re-find (re-pattern arg))
-       (boolean)))
+  (try
+    (->> data
+         str
+         (re-find (re-pattern arg))
+         (boolean))
+    (catch Exception e (do
+                         (log/error {:message (.getMessage e)}
+                                    "filter-match: error filtering data:" data
+                                    " with arg:" arg)
+                         false))))
 
 (defn- filter-equals [arg data]
   (= data arg))

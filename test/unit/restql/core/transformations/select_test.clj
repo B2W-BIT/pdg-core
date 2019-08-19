@@ -123,6 +123,11 @@
                              {:data {:details {:status 200 :success true}
                                      :result {:foo ["bla" "abcdef" "bar"] :bar 1}}})))
   (is (= {:data {:details {:status 200 :success true}
+                 :result {:foo []}}}
+         (select/from-result [:data {:select [^{:matches "*"} [:foo]]}] ; wrong regex
+                             {:data {:details {:status 200 :success true}
+                                     :result {:foo ["bla" "abcdef" "bar"] :bar 1}}})))
+  (is (= {:data {:details {:status 200 :success true}
                  :result [[{:foo ["abcdef"]}] [{:foo ["abc123"]}]]}}
          (select/from-result [:data {:select [^{:matches "^abc"} [:foo]]}]
                              {:data {:details {:status 200 :success true}
