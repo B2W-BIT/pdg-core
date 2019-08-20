@@ -30,7 +30,7 @@
 (defn- add-params [mappings statement request]
    (-> statement
        (get :with)
-       (as-> params 
+       (as-> params
              (if (is-post-or-put-or-patch? statement)
                (default-modifier-params mappings statement params)
                (default-fetch-params mappings statement params)))
@@ -55,7 +55,7 @@
     (map #(from-statements mappings %) statements)
     (map (partial statement->request mappings) statements)))
 
-(defn build [mappings statement done-requests encoders]
+(defn build [{:keys [encoders mappings]} statement done-requests]
   (->> (resolve-chained-values statement done-requests)
        (expand)
        (apply-encoders encoders)

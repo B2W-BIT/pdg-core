@@ -83,13 +83,13 @@
   #?(:clj (.toString (java.util.UUID/randomUUID))
      :cljs (.toString (uuid4))))
 
-(defn- build-and-execute [mappings encoders {:keys [to-do state]} query-opts uuid result-ch exception-ch]
+(defn- build-and-execute [context {:keys [to-do state]} query-opts uuid result-ch exception-ch]
   (go
     (let [[query-name statement] to-do
           from (:from (second statement))
           result (->
-                  (statement/build mappings statement (:done state) encoders)
-                  (executor/do-request exception-ch query-opts)
+                  (statement/build context statement (:done state))
+                  (as-> requests (executor/do-request context requests exception-ch query-opts))
                   (<!))]
       (log-status result uuid from)
       (>! result-ch (vector query-name result)))))
@@ -97,20 +97,20 @@
 (defn- make-requests
   "goroutine that keeps listening from request-ch and performs http requests
    sending their result to result-ch"
-  [mappings encoders {:keys [request-ch result-ch exception-ch]} query-opts]
+  [context {:keys [request-ch result-ch exception-ch]} query-opts]
   (go-loop [next-req (<! request-ch)
             uuid  (generate-uuid!)]
-    (build-and-execute mappings encoders next-req query-opts uuid result-ch exception-ch)
+    (build-and-execute context next-req query-opts uuid result-ch exception-ch)
     (let [request (<! request-ch)]
       (when request (recur request uuid)))))
 
 ; ######################################; ######################################
 
-(defn run [mappings output-ch exception-ch timeout-ch query encoders {:keys [_debugging] :as query-opts}]
+(defn run [context output-ch exception-ch timeout-ch query {:keys [_debugging] :as query-opts}]
   (let [chans {:request-ch   (chan)
                :result-ch    (chan)
                :exception-ch exception-ch
                :output-ch output-ch
                :timeout-ch timeout-ch}]
-    (make-requests mappings encoders chans query-opts)
+    (make-requests context chans query-opts)
     (do-run query chans)))
