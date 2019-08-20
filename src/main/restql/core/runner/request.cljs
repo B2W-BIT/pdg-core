@@ -193,7 +193,7 @@
 
 (defn decode
   [response]
-  ;; NOTE: It is not optimized for speed and the transit.cljs library is recommended for parsing large amounts of JSON data.  
+  ;; NOTE: It is not optimized for speed and the transit.cljs library is recommended for parsing large amounts of JSON data.
   ;; https://cljs.github.io/api/cljs.core/js-GTclj
   (update response :body #(-> (.parse js/JSON %)
                               (js->clj :keywordize-keys true))))
@@ -242,7 +242,7 @@
        (keep (fn [[k v]] (when (= :empty-chained v) k)))))
 
 (defn verify-and-make-request
-  [request query-opts]
+  [context request query-opts]
   (let [output-ch    (chan)
         empty-chained-params (get-empty-chained-params request)]
     (if (empty? empty-chained-params)

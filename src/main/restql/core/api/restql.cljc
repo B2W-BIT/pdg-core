@@ -50,7 +50,7 @@
     timeout
     (:global-timeout query-opts)))
 
-(defn execute-query-channel [& {:keys [mappings encoders query query-opts]}]
+(defn execute-query-channel [& {:keys [context mappings encoders query query-opts]}]
   (let [; Before query hook
         _ (hook/execute-hook :before-query {:query query
                                             :query-options query-opts})
@@ -58,7 +58,7 @@
         time-before #?(:clj (System/currentTimeMillis)
                        :cljs (.getTime (js/Date.)))
 
-        ; Executing query
+        ; Validating query
         query-opts (set-default-query-options query-opts)
         validated-query (validate-query {:mappings mappings :encoders encoders} query)
 
@@ -66,7 +66,11 @@
         exception-ch (chan)
         timeout-ch (timeout (query-timeout query query-opts))
 
-        _ (runner/run mappings output-ch exception-ch timeout-ch validated-query encoders query-opts)
+        context (assoc context
+                       :encoders encoders
+                       :mappings mappings)
+
+        _ (runner/run context output-ch exception-ch timeout-ch validated-query query-opts)
         parsed-ch (extract-result validated-query timeout-ch output-ch query-opts)
         return-ch (go
                     (let [query-result (<! parsed-ch)
@@ -80,8 +84,9 @@
     [return-ch exception-ch]))
 
 #?(:clj
-   (defn execute-parsed-query [& {:keys [mappings encoders query query-opts]}]
-     (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+   (defn execute-parsed-query [& {:keys [context mappings encoders query query-opts]}]
+     (let [[result-ch exception-ch] (execute-query-channel :context context
+                                                           :mappings mappings
                                                            :encoders encoders
                                                            :query query
                                                            :query-opts query-opts)
@@ -93,16 +98,18 @@
          (<!! response-ch)))))
 
 #?(:clj
-   (defn execute-query [& {:keys [mappings encoders query params options]}]
+   (defn execute-query [& {:keys [context mappings encoders query params options]}]
      (let [parsed-query (parser/parse-query query :context (stringify-keys params))]
-       (execute-parsed-query :mappings mappings
+       (execute-parsed-query :context context
+                             :mappings mappings
                              :encoders encoders
                              :query parsed-query
                              :query-opts options))))
 
-(defn execute-parsed-query-async [& {:keys [mappings encoders query query-opts callback]}]
+(defn execute-parsed-query-async [& {:keys [context mappings encoders query query-opts callback]}]
   (go
-    (let [[result-ch exception-ch] (execute-query-channel :mappings mappings
+    (let [[result-ch exception-ch] (execute-query-channel :context context
+                                                          :mappings mappings
                                                           :encoders encoders
                                                           :query query
                                                           :query-opts query-opts)
@@ -115,17 +122,19 @@
             (<!)
             (callback))))))
 
-#?(:clj (defn execute-query-async [& {:keys [mappings encoders query params options callback]}]
+#?(:clj (defn execute-query-async [& {:keys [context mappings encoders query params options callback]}]
           (let [parsed-query (parser/parse-query query :context (stringify-keys params))]
-            (execute-parsed-query-async :mappings mappings
+            (execute-parsed-query-async :context context
+                                        :mappings mappings
                                         :encoders encoders
                                         :query parsed-query
                                         :query-opts options
                                         :callback callback)))
-   :cljs (defn ^:export execute-query-async [mappings query params options]
+   :cljs (defn ^:export execute-query-async [context mappings query params options]
            (let [p (p/promise)]
-             (execute-parsed-query-async :mappings (js->clj mappings :keywordize-keys true)
-                                         :query (parser/parse-query (js->clj query) :context (stringify-keys  (js->clj params)))
-                                         :query-opts (js->clj options)
-                                         :callback (fn [result] (p/resolve! p (clj->js result))))
+             (execute-parsed-query-async  :context context
+                                          :mappings (js->clj mappings :keywordize-keys true)
+                                          :query (parser/parse-query (js->clj query) :context (stringify-keys  (js->clj params)))
+                                          :query-opts (js->clj options)
+                                          :callback (fn [result] (p/resolve! p (clj->js result))))
              p)))
