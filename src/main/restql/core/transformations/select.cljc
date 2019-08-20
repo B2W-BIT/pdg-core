@@ -29,10 +29,12 @@
   ([raw-result selector] (select-item raw-result selector (meta selector)))
   ([raw-result selector filters]
    (cond
-     (= [:*] selector)        {}
-     (sequential? raw-result) (->> raw-result (map #(select-item % selector filters)) vec)
-     (map? raw-result)        (-> selector first raw-result (select-item (rest selector) filters) (as-> val (if (nil? val) {} {(first selector) val})))
-     :else                    (apply-filters raw-result filters))))
+     (= [:*] selector)                 {}
+     (sequential? raw-result)          (->> raw-result (map #(select-item % selector filters)) vec)
+     (and (map? raw-result)
+          (not-empty (rest selector))) (-> selector first raw-result (select-item (rest selector) filters) (as-> val (if (nil? val) {} {(first selector) val})))
+     (map? raw-result)                 (-> raw-result (get-in selector) (apply-filters filters) (as-> val (if (nil? val) {} {(first selector) val})))
+     :else                             (apply-filters raw-result filters))))
 
 (defn- merge-selects [r1 r2]
   (cond
