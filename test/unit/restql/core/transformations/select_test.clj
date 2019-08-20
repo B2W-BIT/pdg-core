@@ -185,3 +185,10 @@
                              {:data {:details {:status 200 :success true}
                                      :result {:foo [{:text "abc"}
                                                     {:text "xyz"}]}}}))))
+
+(deftest testing-complex-item
+  (is (= {:data {:details {:status 200 :success true}
+                 :result {:heroes [{:name "SpiderMan"} {:name "Thor"}] :foo 1}}}
+         (select/from-result [:data {:select [[:heroes] [:foo]]}]
+                             {:data {:details {:status 200 :success true}
+                                     :result {:heroes [{:name "SpiderMan"} {:name "Thor"}] :foo 1 :bar 1}}}))))
