@@ -12,6 +12,16 @@
                              {:cart {:details {:status 200 :success true}
                                      :result {:id 1 :lines 2 :name 3}}
                               :customer {:details {:status 200 :success true}
+                                         :result {:other 4 :another 5}}})))
+  (is (= {:cart {:details {:status 200 :success true}
+                 :result {:id 1}}
+          :customer {:details {:status 200 :success true}
+                     :result {:another 5}}}
+         (select/from-result [:cart {:select [[:id] [:lines]]}
+                              :customer {:select [[:another]]}]
+                             {:cart {:details {:status 200 :success true}
+                                     :result {:id 1 :name 3}}
+                              :customer {:details {:status 200 :success true}
                                          :result {:other 4 :another 5}}}))))
 
 (deftest testing-list-result
@@ -36,6 +46,23 @@
                    :result [{:id "B10"} {:id "B20"}]}
           :hero {:details [{:status 200 :success true}
                            {:success true :status 200}]
+                 :result [{:name "Batman"}
+                          {:name "Robin" :id "B10"}]}}
+         (select/from-result [:heroes {:from :heroes
+                                       :method :get}
+                              :hero   {:from :hero
+                                       :method :get
+                                       :with {:id [:heroes :id]}
+                                       :select [[:name] [:id]]}]
+                             {:heroes {:details {:status 200 :success true}
+                                       :result [{:id "B10"} {:id "B20"}]}
+                              :hero {:details [{:status 200 :success true}
+                                               {:success true, :status 200}]
+                                     :result [{:name "Batman" :foo "bar"} {:name "Robin", :id "B10" :foo "bar"}]}})))
+  (is (= {:heroes {:details {:status 200 :success true}
+                   :result [{:id "B10"} {:id "B20"}]}
+          :hero {:details [{:status 200 :success true}
+                           {:success true :status 200}]
                  :result [[{:name "Batman"}]
                           [{:name "Robin"}]]}}
          (select/from-result [:heroes {:from :heroes
@@ -53,7 +80,7 @@
                    :result [{:id "B10"} {:id "B20"}]}
           :hero {:details [{:status 200 :success true}
                            {:success true :status 200}]
-                 :result [[{:name "Batman"}] []]}}
+                 :result [[{:name "Batman"}] [{}]]}}
          (select/from-result [:heroes {:from :heroes
                                        :method :get}
                               :hero   {:from :hero
@@ -90,6 +117,11 @@
                              {:data {:details {:status 200 :success true}
                                      :result {:top {:foo 1 :bar 2}}}})))
   (is (= {:data {:details {:status 200 :success true}
+                 :result {:top {:foo 1}}}}
+         (select/from-result [:data {:select [[:top :foo] [:top :bar]]}]
+                             {:data {:details {:status 200 :success true}
+                                     :result {:top {:foo 1}}}})))
+  (is (= {:data {:details {:status 200 :success true}
                  :result {:top {:foo 1 :bar {:deepbar 2}}}}}
          (select/from-result [:data {:select [[:top :foo] [:top :bar :deepbar]]}]
                              {:data {:details {:status 200 :success true}
@@ -98,7 +130,7 @@
                    :result [{:id "B10"} {:id "B20"}]}
           :hero {:details [{:status 200 :success true}
                            {:success true :status 200}]
-                 :result {:attr [{:name "Batman" :id "B10"}]}}}
+                 :result {:attr [{:name "Batman" :id "B10"} {:name "Robin"}]}}}
          (select/from-result [:heroes {:from :heroes
                                        :method :get}
                               :hero   {:from :hero
@@ -147,7 +179,7 @@
 
 (deftest testing-nested-filter
   (is (= {:data {:details {:status 200 :success true}
-                 :result {:foo [{:text "abc"}]}}}
+                 :result {:foo [{:text "abc"} {}]}}}
 
          (select/from-result [:data {:select [^{:matches "^abc.*"} [:foo :text]]}]
                              {:data {:details {:status 200 :success true}
