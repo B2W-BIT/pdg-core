@@ -251,7 +251,9 @@
                      (some-> request :body json/encode)
                      (get-default :pool-timeout request-timeout))
          ; Before Request hook
-        before-hook-ctx (hook/execute-hook :before-request request-map)]
+        before-hook-ctx (hook/execute-hook :before-request request-map)
+        request-map (assoc request-map :headers (-> (into {} (:outbound-headers-map before-hook-ctx))
+                                                    (merge (:headers request-map))))]
     (log/debug request-map "Preparing request")
     (-> (http/request request-map)
         (d/chain #(request-respond-callback %
