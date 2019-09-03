@@ -59,6 +59,16 @@
     (is (= (parse-query "from heroes as hero params id = $id" :context {"id" "123"})
            [:hero {:from :heroes :with {:id "123"} :method :get}])))
 
+  (testing "Testing query params variable parameter"
+    (is (= (parse-query "from heroes as hero with $hero-id" :context {"hero-id" {"id" "123"}})
+           [:hero {:from :heroes :with {:id "123"} :method :get}])))
+
+  (testing "Testing query params variable parameter"
+    (is (= (binding [*print-meta* true]
+             (pr-str (parse-query "to heroes as hero with heores = $heroes -> flatten" :context {"heroes" [{:id "123"} {:id "456"} {:id "789"}]})))
+           (binding [*print-meta* true]
+             (pr-str [:hero {:from :heroes, :method :post, :with {:heores ^{:expand false} [{:id "123"} {:id "456"} {:id "789"}]}}])))))
+
   (testing "Testing query params one null parameter"
     (is (= (parse-query "from heroes as hero params id = 123, spell = null")
            [:hero {:from :heroes :with {:id 123 :spell nil} :method :get}])))
