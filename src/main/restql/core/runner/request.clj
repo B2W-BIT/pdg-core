@@ -191,7 +191,7 @@
                               :url (some-> request :url)
                               :params    (:query-params request)
                               :response-time (- (System/currentTimeMillis) time-before)
-                              :errordetail (pr-str (some-> exception :error)))
+                              :errordetail (pr-str exception))
             ; After Request hook
             _ (hook/execute-hook :after-request (get-after-ctx {:ctx before-hook-ctx
                                                                 :status error-status
