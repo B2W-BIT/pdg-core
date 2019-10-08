@@ -12,14 +12,16 @@
 (def default-values {:pool-connections-per-host 500
                      :pool-total-connections 10000
                      :pool-max-queue-size 100
-                     :pool-control-period 250})
+                     :pool-control-period 250
+                     :connection-keep-alive true})
 
 (defn- get-default
   ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
   ([key default] (if (contains? env key) (read-string (env key)) default)))
 
 (defonce client-connection-pool
-  (http/connection-pool {:connections-per-host (get-default :pool-connections-per-host)
+  (http/connection-pool {:connection-options {:keep-alive? (get-default :connection-keep-alive)}
+                         :connections-per-host (get-default :pool-connections-per-host)
                          :total-connections    (get-default :pool-total-connections)
                          :max-queue-size       (get-default :pool-max-queue-size)
                          :control-period       (get-default :pool-control-period)
