@@ -18,7 +18,7 @@ Add restQL dependency to your project
 **Lein**
 
 ```
-[b2wdigital/restql-core "2.4.0"]
+[b2wdigital/restql-core "3.4.1"]
 ```
 
 **NPM**
