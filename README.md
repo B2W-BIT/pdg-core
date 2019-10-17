@@ -37,7 +37,7 @@ npm i @b2wdigital/restql
 
 **Node**
 ```js
-var restlq = require('@b2wdigital/restql')
+var restql = require('@b2wdigital/restql')
 
 // executeQuery(mappings, query, params, options) => <Promise>
 restql

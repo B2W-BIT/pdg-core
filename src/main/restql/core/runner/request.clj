@@ -12,14 +12,16 @@
 (def default-values {:pool-connections-per-host 500
                      :pool-total-connections 10000
                      :pool-max-queue-size 100
-                     :pool-control-period 250})
+                     :pool-control-period 250
+                     :connection-keep-alive true})
 
 (defn- get-default
   ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
   ([key default] (if (contains? env key) (read-string (env key)) default)))
 
 (defonce client-connection-pool
-  (http/connection-pool {:connections-per-host (get-default :pool-connections-per-host)
+  (http/connection-pool {:connection-options {:keep-alive? (get-default :connection-keep-alive)}
+                         :connections-per-host (get-default :pool-connections-per-host)
                          :total-connections    (get-default :pool-total-connections)
                          :max-queue-size       (get-default :pool-max-queue-size)
                          :control-period       (get-default :pool-control-period)
@@ -102,9 +104,9 @@
     (instance? aleph.utils.ProxyConnectionTimeoutException exception) "ProxyConnectionTimeoutException"
     :else "Internal error"))
 
-(defn- get-after-ctx [{:keys [ctx status response-time request result]}]
-  (merge {} ctx request result {:status status
-                                :response-time response-time}))
+(defn- get-after-ctx [{:keys [context ctx status response-time request result]}]
+  (merge {} ctx request result context {:status status
+                                        :response-time response-time}))
 
 (defn- mount-url [url params]
   (str url (if (empty? params) "" (str "?" (form-encode params)))))
@@ -126,7 +128,8 @@
                                                   query-opts
                                                   output-ch
                                                   request-map
-                                                  before-hook-ctx]}]
+                                                  before-hook-ctx
+                                                  context]}]
   (let [log-data {:resource (:from request)
                   :timeout  request-timeout
                   :success  true}]
@@ -146,7 +149,8 @@
                                                               :status (:status result)
                                                               :response-time (- (System/currentTimeMillis) time-before)
                                                               :request request
-                                                              :result result}))]
+                                                              :result result
+                                                              :context context}))]
       ; Send response to channel
       (go (->> (if (:debugging query-opts)
                  (response-with-debug response request-map query-opts)
@@ -163,7 +167,8 @@
                                                    query-opts
                                                    output-ch
                                                    request-map
-                                                   before-hook-ctx]}]
+                                                   before-hook-ctx
+                                                   context]}]
   (if (and (instance? clojure.lang.ExceptionInfo exception) (:body (.getData exception)))
     (request-respond-callback (.getData exception)
                               :request         request
@@ -172,7 +177,8 @@
                               :time-before     time-before
                               :request-map     request-map
                               :output-ch       output-ch
-                              :before-hook-ctx before-hook-ctx)
+                              :before-hook-ctx before-hook-ctx
+                              :context context)
     (let [error-status (get-error-status exception)
           log-data {:resource (:from request)
                     :timeout  request-timeout
@@ -187,13 +193,14 @@
                               :url (some-> request :url)
                               :params    (:query-params request)
                               :response-time (- (System/currentTimeMillis) time-before)
-                              :errordetail (pr-str (some-> exception :error)))
+                              :errordetail (pr-str exception))
             ; After Request hook
             _ (hook/execute-hook :after-request (get-after-ctx {:ctx before-hook-ctx
                                                                 :status error-status
                                                                 :response-time (- (System/currentTimeMillis) time-before)
                                                                 :request request
-                                                                :result error-data}))
+                                                                :result error-data
+                                                                :context context}))
             error-response (build-error-response error-data exception)]
         (log/warn error-data "Request failed")
         ; Send error response to channel
@@ -216,8 +223,7 @@
   (into {} (map (fn [[k v]]
                   [k (if (nil? v) "" v)]) headers)))
 
-(defn- build-request-map [request request-timeout valid-query-params headers time body-encoded poll-timeout]
-
+(defn- build-request-map [context request request-timeout valid-query-params headers time body-encoded poll-timeout]
   {:url                (:url request)
    :request-method     (:method request)
    :content-type       "application/json"
@@ -230,13 +236,15 @@
    :time               time
    :body               body-encoded
    :pool               client-connection-pool
-   :pool-timeout       poll-timeout})
+   :pool-timeout       poll-timeout
+   :context            context})
 
-(defn- make-request [request query-opts output-ch]
+(defn- make-request [context request query-opts output-ch]
   (let [request         (parse-query-params request)
         time-before     (System/currentTimeMillis)
         request-timeout (if (nil? (:timeout request)) (:timeout query-opts) (:timeout request))
         request-map (build-request-map
+                     context
                      request
                      request-timeout
                      (valid-query-params request query-opts)
@@ -245,7 +253,9 @@
                      (some-> request :body json/encode)
                      (get-default :pool-timeout request-timeout))
          ; Before Request hook
-        before-hook-ctx (hook/execute-hook :before-request request-map)]
+        before-hook-ctx (hook/execute-hook :before-request request-map)
+        request-map (assoc request-map :headers (-> (into {} (:outbound-headers-map before-hook-ctx))
+                                                    (merge (:headers request-map))))]
     (log/debug request-map "Preparing request")
     (-> (http/request request-map)
         (d/chain #(request-respond-callback %
@@ -255,7 +265,8 @@
                                             :time-before time-before
                                             :output-ch output-ch
                                             :request-map request-map
-                                            :before-hook-ctx before-hook-ctx))
+                                            :before-hook-ctx before-hook-ctx
+                                            :context context))
         (d/catch Exception #(request-error-callback %
                                                     :request request
                                                     :request-timeout request-timeout
@@ -263,7 +274,8 @@
                                                     :time-before time-before
                                                     :output-ch output-ch
                                                     :request-map request-map
-                                                    :before-hook-ctx before-hook-ctx))
+                                                    :before-hook-ctx before-hook-ctx
+                                                    :context context))
         (d/success! 1))
     output-ch))
 
@@ -276,11 +288,11 @@
        (keep (fn [[k v]] (when (= :empty-chained v) k)))))
 
 (defn verify-and-make-request
-  [request query-opts]
+  [context request query-opts]
   (let [output-ch    (chan)
         empty-chained-params (get-empty-chained-params request)]
     (if (empty? empty-chained-params)
-      (make-request request query-opts output-ch)
+      (make-request context request query-opts output-ch)
       (do
         (go (>! output-ch {:status 400 :body (create-skip-message empty-chained-params)}))
         output-ch))))

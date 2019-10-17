@@ -1,7 +1,8 @@
 (ns restql.core.transformations.select
   (:require [restql.core.transformations.filters :as filters]
             [restql.core.util.deep-merge :refer [deep-merge]]
-            [restql.core.util.get-in-with-list-support :refer [get-in-with-list-support]]))
+            [restql.core.util.get-in-with-list-support :refer [get-in-with-list-support]]
+            [clojure.walk :refer [postwalk]]))
 
 (defn apply-filters [value filters]
   (if (nil? filters)
@@ -28,10 +29,12 @@
   ([raw-result selector] (select-item raw-result selector (meta selector)))
   ([raw-result selector filters]
    (cond
-     (= [:*] selector)        {}
-     (sequential? raw-result) (->> raw-result (map #(select-item % selector filters)) (filter some?) vec)
-     (map? raw-result)        (-> selector first raw-result (select-item (rest selector) filters) (as-> val (if (nil? val) nil {(first selector) val})))
-     :else                    (apply-filters raw-result filters))))
+     (= [:*] selector)                 {}
+     (sequential? raw-result)          (->> raw-result (map #(select-item % selector filters)) vec)
+     (and (map? raw-result)
+          (not-empty (rest selector))) (-> selector first raw-result (select-item (rest selector) filters) (as-> val (if (nil? val) {} {(first selector) val})))
+     (map? raw-result)                 (-> raw-result (get-in selector) (apply-filters filters) (as-> val (if (nil? val) {} {(first selector) val})))
+     :else                             (apply-filters raw-result filters))))
 
 (defn- merge-selects [r1 r2]
   (cond
@@ -45,11 +48,21 @@
        (select-item raw-result)
        (merge-selects filtered-result)))
 
+(defn- filter-nils [result]
+  (postwalk
+     (fn [el]
+       (cond
+         (sequential? el) (->> el (filter (complement nil?)) (into []))
+         (map? el) (->> el (filter (comp not nil? second)) (into {}))
+         :else el))
+     result))
+
 (defn- resource-filtered [selection-rules resource-name resource-data]
   (let [result (:result resource-data)
         initial (initial-result selection-rules result)]
     (->> selection-rules
          (reduce (partial filter-result result) initial)
+         (filter-nils)
          (assoc-in resource-data [:result])
          (conj [resource-name]))))
 
