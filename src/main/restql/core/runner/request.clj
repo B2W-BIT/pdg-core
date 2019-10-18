@@ -13,7 +13,8 @@
                      :pool-total-connections 10000
                      :pool-max-queue-size 100
                      :pool-control-period 250
-                     :connection-keep-alive true})
+                     :connection-keep-alive true
+                     :connection-timeout 2000})
 
 (defn- get-default
   ([key] (if (contains? env key) (read-string (env key)) (default-values key)))
@@ -228,7 +229,7 @@
    :request-method     (:method request)
    :content-type       "application/json"
    :resource           (:from request)
-   :connection-timeout request-timeout
+   :connection-timeout (get-default :connection-timeout)
    :request-timeout    request-timeout
    :read-timeout       request-timeout
    :query-params       valid-query-params
