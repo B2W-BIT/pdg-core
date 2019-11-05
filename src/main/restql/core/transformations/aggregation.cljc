@@ -33,8 +33,11 @@
 
 (defn- build-aggregation [result-from result-to [path & rest]]
   (cond
+    (and (sequential? result-to)
+         (map? result-from)) (map #(build-aggregation result-from % (conj rest path)) result-to)
     (sequential? result-to) (map #(build-aggregation %1 %2 (conj rest path)) result-from result-to)
     (nil? rest) (assoc-in result-to [path] result-from)
+    (map? result-from) (assoc-in result-to [path] (build-aggregation result-from (path result-to) rest))
     (sequential? (path result-to)) (assoc-in result-to [path] (map #(build-aggregation %1 %2 rest) result-from (path result-to)))
     :else (assoc-in result-to [path] (build-aggregation result-from (path result-to) rest))))
 
