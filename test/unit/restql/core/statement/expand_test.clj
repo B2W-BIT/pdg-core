@@ -44,4 +44,8 @@
   (testing "Nil is not expandable (infinite recursion bug)"
     (is (=  [[{:from :sidekick, :with {:heroes :h1}, :method :get, :multiplexed true}
               {:from :sidekick, :with {:heroes :villains}, :method :get, :multiplexed true}]]
-            (expand {:from :sidekick, :with {:heroes [[:h1 :villains]]}, :method :get})))))
+            (expand {:from :sidekick, :with {:heroes [[:h1 :villains]]}, :method :get}))))
+
+  (testing "The type of sequential collection should not change the expanded result"
+    (is (= (expand {:from :language, :method :get, :with {:id ['("clojure")]}})
+           (expand {:from :language, :method :get, :with {:id [["clojure"]]}})))))

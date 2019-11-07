@@ -33,7 +33,7 @@
   (let [new-statement (->> (get-first-values list-params)
                            (merge (:with statement))
                            (assoc statement :multiplexed true :with))]
-    (if (some vector? (vals (get-first-values list-params)))
+    (if (some sequential? (vals (get-first-values list-params)))
       (do-expand new-statement)
       new-statement)))
 
