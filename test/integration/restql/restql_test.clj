@@ -618,3 +618,9 @@
            (second)
            (<!!))
           (is (> 2 @counter)))))))
+
+(deftest request-with-param-with-brackets
+  (with-routes!
+    {(route-request "/hero" {:name%5B%5D  "Dwayne \"The Rock\" Johnson"}) (hero-route)}
+    (let [result (execute-query uri "from hero with name[] = $name" {:name "Dwayne \"The Rock\" Johnson"})]
+      (is (= 200 (get-in result [:hero :details :status]))))))
