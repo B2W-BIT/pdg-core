@@ -272,6 +272,33 @@
                                                                                :content ("1")}
                                                                               {:tag :ModifierList
                                                                                :content nil})})})})})})})))
+  (testing "resource with brackets param "
+    (is (= (query/from-text "from heroes with id[] = [1, 2]")
+           {:tag :Query
+            :content '({:tag :QueryBlock
+                        :content ({:tag :QueryItem
+                                   :content ({:tag :ActionRule
+                                              :content ({:tag :ActionRuleKey
+                                                         :content ("from")}
+                                                        {:tag :ActionRuleValue
+                                                         :content ("heroes")})}
+                                             {:tag :WithRule
+                                              :content ({:tag :WithRuleItem
+                                                         :content ({:tag :WithParamName
+                                                                    :content ("id[]")}
+                                                                   {:tag :WithParamValue,
+                                                                    :content
+                                                                         ({:tag :ListParam,
+                                                                           :content
+                                                                                ({:tag :WithParamValue,
+                                                                                  :content
+                                                                                       ({:tag :Integer, :content ("1")}
+                                                                                        {:tag :ModifierList, :content nil})}
+                                                                                 {:tag :WithParamValue,
+                                                                                  :content
+                                                                                       ({:tag :Integer, :content ("2")}
+                                                                                        {:tag :ModifierList, :content nil})})}
+                                                                          {:tag :ModifierList, :content nil})})})})})})})))
   (testing "resource with param null"
     (is (= (query/from-text "from heroes with id = 1, skill = null")
            {:tag :Query
