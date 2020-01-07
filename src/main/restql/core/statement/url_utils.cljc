@@ -45,13 +45,13 @@
 
 (defn interpolate
   "given a parameterized url and a map with values, returns
-   a string with a result url, with the values applied"
+   a string with a result url, with the values applied and without query params"
   [url params]
-  (->> url
-       (extract-url-parameters)
-       (:path)
-       (reduce (partial replace-url-with-param params) url)))
-
+  (let [url-without-query-params (-> url (str/split #"\?") (get 0))]
+    (->> url-without-query-params
+        (extract-url-parameters)
+        (:path)
+        (reduce (partial replace-url-with-param params) url-without-query-params))))
 
 (defn dissoc-path-params
   "removes all keys of the map that appear as a parameter of

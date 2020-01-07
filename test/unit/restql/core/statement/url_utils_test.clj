@@ -37,8 +37,10 @@
          (interpolate "http://cart/:id" {:id "123"})))
   (is (= "http://customer/900/address/800"
          (interpolate "http://customer/:customer-id/address/:address-id" {:customer-id "900" :address-id "800"})))
-  (is (= "http://customer/900/address/800"
-         (interpolate "http://customer/:customer-id/address/:address-id?size" {:customer-id "900" :address-id "800" :size 2}))))
+  (is (= "http://customer/900"
+         (interpolate "http://customer/:customer-id?:size" {:customer-id "900" :size 2})))
+  (is (= "http://customer/1"
+         (interpolate "http://customer/1?:size" {:size 2}))))
 
 ;;finally, the interpolated parameters must be removed from the parameters
 ;;map, so they will not pop up in the query strings

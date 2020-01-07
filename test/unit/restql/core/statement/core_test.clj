@@ -126,4 +126,18 @@
                                    :method :post
                                    :with {:id 1 :name "param-name" :active true}
                                    :timeout 1000
+                                   :headers {:content-type "application/json"}}])))
+    (is
+     (= [{:from         :resource-name
+          :url          "http://resource-url/name"
+          :method       :post
+          :query-params {:id 1}
+          :body         {:active true}
+          :timeout      1000
+          :headers      {:content-type "application/json"}}]
+        (statement/from-statements {:resource-name "http://resource-url/name?:id"}
+                                 [{:from :resource-name
+                                   :method :post
+                                   :with {:id 1 :active true}
+                                   :timeout 1000
                                    :headers {:content-type "application/json"}}])))))
