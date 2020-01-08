@@ -288,17 +288,65 @@
                                                                     :content ("id[]")}
                                                                    {:tag :WithParamValue,
                                                                     :content
-                                                                         ({:tag :ListParam,
-                                                                           :content
-                                                                                ({:tag :WithParamValue,
-                                                                                  :content
-                                                                                       ({:tag :Integer, :content ("1")}
-                                                                                        {:tag :ModifierList, :content nil})}
-                                                                                 {:tag :WithParamValue,
-                                                                                  :content
-                                                                                       ({:tag :Integer, :content ("2")}
-                                                                                        {:tag :ModifierList, :content nil})})}
-                                                                          {:tag :ModifierList, :content nil})})})})})})})))
+                                                                    ({:tag :ListParam,
+                                                                      :content
+                                                                      ({:tag :WithParamValue,
+                                                                        :content
+                                                                        ({:tag :Integer, :content ("1")}
+                                                                         {:tag :ModifierList, :content nil})}
+                                                                       {:tag :WithParamValue,
+                                                                        :content
+                                                                        ({:tag :Integer, :content ("2")}
+                                                                         {:tag :ModifierList, :content nil})})}
+                                                                     {:tag :ModifierList, :content nil})})})})})})})))
+
+  (testing "resource a list param with flatten modifier"
+    (is (= (query/from-text "from heroes with id = [weapons.id -> flatten, weapons.name -> flatten]")
+           {:tag :Query,
+           :content
+           '({:tag :QueryBlock,
+             :content
+             ({:tag :QueryItem,
+               :content
+               ({:tag :ActionRule,
+                 :content
+                 ({:tag :ActionRuleKey, :content ("from")}
+                  {:tag :ActionRuleValue, :content ("heroes")})}
+                {:tag :WithRule,
+                 :content
+                 ({:tag :WithRuleItem,
+                   :content
+                   ({:tag :WithParamName, :content ("id")}
+                    {:tag :WithParamValue,
+                     :content
+                     ({:tag :ListParam,
+                       :content
+                       ({:tag :WithParamValue,
+                         :content
+                         ({:tag :Chaining,
+                           :content
+                           ({:tag :PathItem, :content ("weapons")}
+                            {:tag :PathItem, :content ("id")})}
+                          {:tag :ModifierList,
+                           :content
+                           ({:tag :Modifier,
+                             :content
+                             ({:tag :ModifierAlias,
+                               :content ("flatten")})})})}
+                        {:tag :WithParamValue,
+                         :content
+                         ({:tag :Chaining,
+                           :content
+                           ({:tag :PathItem, :content ("weapons")}
+                            {:tag :PathItem, :content ("name")})}
+                          {:tag :ModifierList,
+                           :content
+                           ({:tag :Modifier,
+                             :content
+                             ({:tag :ModifierAlias,
+                               :content ("flatten")})})})})}
+                      {:tag :ModifierList, :content nil})})})})})})})))
+
   (testing "resource with param null"
     (is (= (query/from-text "from heroes with id = 1, skill = null")
            {:tag :Query
@@ -470,7 +518,7 @@
                                                                                                                 :content nil})})})}
                                                                               {:tag :ModifierList
                                                                                :content nil})})})})})})})))
-(testing "resource with compex param with inner modifier"
+  (testing "resource with compex param with inner modifier"
     (is (= (query/from-text "from sidekick\n
                                        with\n
                                          source = weapons.source\n
@@ -481,69 +529,69 @@
                                          } -> flatten")
            {:tag :Query
             :content '({:tag :QueryBlock
-                       :content ({:tag :QueryItem
-                                  :content ({:tag :ActionRule
-                                             :content ({:tag :ActionRuleKey
-                                                        :content ("from")}
-                                                       {:tag :ActionRuleValue
-                                                        :content ("sidekick")})}
-                                            {:tag :WithRule
-                                             :content ({:tag :WithRuleItem
-                                                        :content ({:tag :WithParamName
-                                                                   :content ("source")}
-                                                                  {:tag :WithParamValue
-                                                                   :content ({:tag :Chaining
-                                                                              :content ({:tag :PathItem
-                                                                                         :content ("weapons")}
-                                                                                        {:tag :PathItem
-                                                                                         :content ("source")})}
-                                                                             {:tag :ModifierList
-                                                                              :content nil})})}
-                                                       {:tag :WithRuleItem
-                                                        :content ({:tag :WithParamName
-                                                                   :content ("weapon")}
-                                                                  {:tag :WithParamValue
-                                                                   :content ({:tag :ComplexParam
-                                                                              :content ({:tag :ComplexParamItem
-                                                                                         :content ({:tag :ComplexParamKey
-                                                                                                    :content ("name")}
-                                                                                                   {:tag :WithParamValue
-                                                                                                    :content ({:tag :Chaining
-                                                                                                               :content ({:tag :PathItem
-                                                                                                                          :content ("weapons")}
-                                                                                                                         {:tag :PathItem
-                                                                                                                          :content ("swords")}
-                                                                                                                         {:tag :PathItem
-                                                                                                                          :content ("name")})}
-                                                                                                              {:tag :ModifierList
-                                                                                                               :content ({:tag :Modifier
-                                                                                                                          :content ({:tag :ModifierAlias
-                                                                                                                                     :content ("flatten")})})})})}
-                                                                                        {:tag :ComplexParamItem
-                                                                                         :content ({:tag :ComplexParamKey
-                                                                                                    :content ("typeId")}
-                                                                                                   {:tag :WithParamValue
-                                                                                                    :content ({:tag :Chaining
-                                                                                                               :content ({:tag :PathItem
-                                                                                                                          :content ("weapons")}
-                                                                                                                         {:tag :PathItem
-                                                                                                                          :content ("types")}
-                                                                                                                         {:tag :PathItem
-                                                                                                                          :content ("typeId")})}
-                                                                                                              {:tag :ModifierList
-                                                                                                               :content nil})})}
-                                                                                        {:tag :ComplexParamItem
-                                                                                         :content ({:tag :ComplexParamKey
-                                                                                                    :content ("invisible")}
-                                                                                                   {:tag :WithParamValue
-                                                                                                    :content ({:tag :False
-                                                                                                               :content nil}
-                                                                                                              {:tag :ModifierList
-                                                                                                               :content nil})})})}
-                                                                             {:tag :ModifierList
-                                                                              :content ({:tag :Modifier
-                                                                                         :content ({:tag :ModifierAlias
-                                                                                                    :content ("flatten")})})})})})})})})})))
+                        :content ({:tag :QueryItem
+                                   :content ({:tag :ActionRule
+                                              :content ({:tag :ActionRuleKey
+                                                         :content ("from")}
+                                                        {:tag :ActionRuleValue
+                                                         :content ("sidekick")})}
+                                             {:tag :WithRule
+                                              :content ({:tag :WithRuleItem
+                                                         :content ({:tag :WithParamName
+                                                                    :content ("source")}
+                                                                   {:tag :WithParamValue
+                                                                    :content ({:tag :Chaining
+                                                                               :content ({:tag :PathItem
+                                                                                          :content ("weapons")}
+                                                                                         {:tag :PathItem
+                                                                                          :content ("source")})}
+                                                                              {:tag :ModifierList
+                                                                               :content nil})})}
+                                                        {:tag :WithRuleItem
+                                                         :content ({:tag :WithParamName
+                                                                    :content ("weapon")}
+                                                                   {:tag :WithParamValue
+                                                                    :content ({:tag :ComplexParam
+                                                                               :content ({:tag :ComplexParamItem
+                                                                                          :content ({:tag :ComplexParamKey
+                                                                                                     :content ("name")}
+                                                                                                    {:tag :WithParamValue
+                                                                                                     :content ({:tag :Chaining
+                                                                                                                :content ({:tag :PathItem
+                                                                                                                           :content ("weapons")}
+                                                                                                                          {:tag :PathItem
+                                                                                                                           :content ("swords")}
+                                                                                                                          {:tag :PathItem
+                                                                                                                           :content ("name")})}
+                                                                                                               {:tag :ModifierList
+                                                                                                                :content ({:tag :Modifier
+                                                                                                                           :content ({:tag :ModifierAlias
+                                                                                                                                      :content ("flatten")})})})})}
+                                                                                         {:tag :ComplexParamItem
+                                                                                          :content ({:tag :ComplexParamKey
+                                                                                                     :content ("typeId")}
+                                                                                                    {:tag :WithParamValue
+                                                                                                     :content ({:tag :Chaining
+                                                                                                                :content ({:tag :PathItem
+                                                                                                                           :content ("weapons")}
+                                                                                                                          {:tag :PathItem
+                                                                                                                           :content ("types")}
+                                                                                                                          {:tag :PathItem
+                                                                                                                           :content ("typeId")})}
+                                                                                                               {:tag :ModifierList
+                                                                                                                :content nil})})}
+                                                                                         {:tag :ComplexParamItem
+                                                                                          :content ({:tag :ComplexParamKey
+                                                                                                     :content ("invisible")}
+                                                                                                    {:tag :WithParamValue
+                                                                                                     :content ({:tag :False
+                                                                                                                :content nil}
+                                                                                                               {:tag :ModifierList
+                                                                                                                :content nil})})})}
+                                                                              {:tag :ModifierList
+                                                                               :content ({:tag :Modifier
+                                                                                          :content ({:tag :ModifierAlias
+                                                                                                     :content ("flatten")})})})})})})})})})))
   (testing "resource with param variable"
     (is (= (query/from-text "from heroes with id = $id")
            {:tag :Query
@@ -567,16 +615,16 @@
     (is (= (query/from-text "from heroes with $hero")
            {:tag :Query
             :content '({:tag :QueryBlock
-                       :content ({:tag :QueryItem
-                                  :content ({:tag :ActionRule
-                                             :content ({:tag :ActionRuleKey
-                                                        :content ("from")}
-                                                       {:tag :ActionRuleValue
-                                                        :content ("heroes")})}
-                                            {:tag :WithRule
-                                             :content ({:tag :WithRuleItem
-                                                        :content ({:tag :Variable
-                                                                   :content ("hero")})})})})})})))
+                        :content ({:tag :QueryItem
+                                   :content ({:tag :ActionRule
+                                              :content ({:tag :ActionRuleKey
+                                                         :content ("from")}
+                                                        {:tag :ActionRuleValue
+                                                         :content ("heroes")})}
+                                             {:tag :WithRule
+                                              :content ({:tag :WithRuleItem
+                                                         :content ({:tag :Variable
+                                                                    :content ("hero")})})})})})})))
   (testing "resource with param variable and modifier"
     (is (= (query/from-text "from heroes with id = $id -> flatten")
            {:tag :Query
