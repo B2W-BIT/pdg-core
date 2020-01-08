@@ -49,7 +49,7 @@ Variable =
   <"$"> Identifier;
 
 <QueryParameterName> =
-  Identifier;
+  IdentifierParameter;
 
 OnlyRule =
   KW_ONLY WS_MAND OnlyRuleItem (WS LS WS OnlyRuleItem)*;
@@ -195,10 +195,13 @@ ActionRuleKey =
   <",">;
 
 <Identifier> =
-  #'[a-zA-Z0-9-_.\[\]]*';
+  #'[a-zA-Z0-9-_.]*';
 
 <IdentifierWithoutDot> =
   #'[a-zA-Z0-9-_]*';
+
+<IdentifierParameter> =
+  #'[a-zA-Z0-9-_.\[\]]*';
 
 <Primitive> =
   Number | String | Boolean | Null;
