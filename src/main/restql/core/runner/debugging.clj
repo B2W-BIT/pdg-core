@@ -4,11 +4,11 @@
 (defn- mount-url [url params]
   (str url (if (empty? params) "" (str "?" (form-encode params)))))
 
-(defn- post-patch-patch? [request]
+(defn- post-put-patch? [request]
   (some #(= % (:method request)) [:post :put :patch]))
 
 (defn- add-body-if-post-put-patch [request debug-map]
-  (if (post-patch-patch? request)
+  (if (post-put-patch? request)
     (assoc debug-map :request-body (:body request))
     debug-map))
 
