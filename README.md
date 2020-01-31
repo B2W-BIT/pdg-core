@@ -4,8 +4,8 @@
 
 
 <p align="center">
-  <a href="https://travis-ci.org/B2W-BIT/restQL-clojure" title="restQL on travis-ci">
-    <img src="https://travis-ci.org/B2W-BIT/restQL-clojure.svg?branch=master" alt="restQL on travis-ci">
+  <a href="https://travis-ci.org/b2wdigital/restQL-clojure" title="restQL on travis-ci">
+    <img src="https://travis-ci.org/b2wdigital/restQL-clojure.svg?branch=master" alt="restQL on travis-ci">
   </a>
 </p>
 
