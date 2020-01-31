@@ -6,7 +6,8 @@
             [restql.parser.json :as json]
             [ring.util.codec :refer [form-encode]]
             [environ.core :refer [env]]
-            [restql.hooks.core :as hook])
+            [restql.hooks.core :as hook]
+            [restql.core.runner.debugging :as debugging])
   (:import [java.net URLDecoder]))
 
 (def default-values {:pool-connections-per-host 500
@@ -109,19 +110,28 @@
   (merge {} ctx request result context {:status status
                                         :response-time response-time}))
 
-(defn- mount-url [url params]
-  (str url (if (empty? params) "" (str "?" (form-encode params)))))
-
-(defn- build-debug-map [response request-map query-opts]
-  {:debug {:url (mount-url (:url request-map) (merge (:query-params request-map) (:forward-params query-opts)))
-           :timeout (:request-timeout request-map)
-           :response-time (:response-time response)
-           :request-headers (:headers request-map)
-           :response-haders (:headers response)
-           :params (merge (:query-params request-map) (:forward-params query-opts))}})
+;(defn- mount-url [url params]
+;  (str url (if (empty? params) "" (str "?" (form-encode params)))))
+;
+;(defn- post-patch-patch? [request]
+;  (some #(= % (:method request)) [:post :put :patch]))
+;
+;(defn- add-body-if-post-put-patch [response request debug-map]
+;  (if (post-patch-patch? request)
+;    (assoc debug-map :body (:body response))
+;    debug-map))
+;
+;(defn- build-debug-map [response request-map query-opts]
+;  (->> {:debug {:url         (mount-url (:url request-map) (merge (:query-params request-map) (:forward-params query-opts)))
+;                :timeout         (:request-timeout request-map)
+;                :response-time   (:response-time response)
+;                :request-headers (:headers request-map)
+;                :response-haders (:headers response)
+;                :params          (merge (:query-params request-map) (:forward-params query-opts))}}
+;       (add-body-if-post-put-patch response request-map)))
 
 (defn- response-with-debug [response request-map query-opts]
-  (into response (build-debug-map response request-map query-opts)))
+  (into response (debugging/build-map response request-map query-opts)))
 
 (defn- request-respond-callback [result & {:keys [request
                                                   request-timeout
