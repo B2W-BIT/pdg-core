@@ -78,8 +78,14 @@
       (assoc base
              :body (json/parse-string parsed))
       (catch Exception e
-        (log/error {:message (.getMessage e)}
-                   "error parsing request")
+        (log/error {:status status
+                    :headers headers
+                    :url url
+                    :params params
+                    :resource resource
+                    :response-time response-time
+                    :message (.getMessage e)}
+                   "error parsing response")
         (assoc base
                :parse-error true
                :body parsed)))))
