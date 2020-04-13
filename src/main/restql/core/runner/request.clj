@@ -76,7 +76,9 @@
               :response-time response-time}]
     (try
       (assoc base
-             :body (json/parse-string parsed))
+             :body (if (= parsed "")
+                     parsed
+                     (json/parse-string parsed)))
       (catch Exception e
         (log/error {:status status
                     :headers headers
