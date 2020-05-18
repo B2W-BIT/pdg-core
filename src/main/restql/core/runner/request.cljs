@@ -248,5 +248,5 @@
     (if (empty? empty-chained-params)
       (make-request request query-opts output-ch)
       (do
-        (go (>! output-ch {:status 400 :body (create-skip-message empty-chained-params)}))
+        (go (>! output-ch {:status 400 :metadata (:metadata request) :body (create-skip-message empty-chained-params)}))
         output-ch))))

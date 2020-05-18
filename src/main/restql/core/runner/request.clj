@@ -76,7 +76,9 @@
               :response-time response-time}]
     (try
       (assoc base
-             :body (json/parse-string parsed))
+             :body (if (= parsed "")
+                     parsed
+                     (json/parse-string parsed)))
       (catch Exception e
         (log/error {:status status
                     :headers headers
@@ -291,5 +293,5 @@
     (if (empty? empty-chained-params)
       (make-request context request query-opts output-ch)
       (do
-        (go (>! output-ch {:status 400 :body (create-skip-message empty-chained-params)}))
+        (go (>! output-ch {:status 400 :metadata (:metadata request) :body (create-skip-message empty-chained-params)}))
         output-ch))))
