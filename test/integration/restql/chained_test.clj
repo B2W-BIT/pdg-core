@@ -53,11 +53,19 @@
 
        {:path "/sidekick" :query-params {:sidekick "batman"}}
        (test-util/route-response [{:id "robin" :weaponId "123"}])
-       
+
        "/weapon/123" (test-util/route-response {:descricao "Batarang"})}
       (let [result (execute-query uri "from hero\n
                                         from sidekick with sidekick = hero.id\n
                                         from weapon with id = sidekick.weaponId")]
         (is (= 200 (get-in result [:hero :details :status])))
         (is (= 200 (:status (first (get-in result [:sidekick :details])))))
-        (is (= 200 (:status (first (first (get-in result [:weapon :details]))))))))))
+        (is (= 200 (:status (first (first (get-in result [:weapon :details])))))))))
+
+  (testing "Chained with value from header"
+    (with-routes!
+      {"/hero" (test-util/route-response 200 {:hi "I'm hero"} {:sidekickId "A"})
+       {:path "/sidekick" :query-params {:id "A"}} (test-util/route-response {:hi "I'm sidekick"})}
+      (let [result (execute-query uri "from hero\n from sidekick with id = hero.sidekickId")]
+        (is (= 200 (get-in result [:hero :details :status])))
+        (is (= 200 (get-in result [:sidekick :details :status])))))))
