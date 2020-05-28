@@ -21,7 +21,9 @@
   ([body]
    {:status 200 :content-type "application/json" :body (json/generate-string body)})
   ([status body]
-   {:status status :content-type "application/json" :body (json/generate-string body)}))
+   {:status status :content-type "application/json" :body (json/generate-string body)})
+  ([status body headers]
+   {:status status :content-type "application/json" :body (json/generate-string body) :headers headers}))
 
 (defn- verify-header [request [k v]]
   (= (get-in request [:headers (keyword k)]) v))

@@ -22,11 +22,23 @@
        (count)
        (not= 0)))
 
-(defn- get-value-from-path [path {status :status body :body}]
-  (cond
-    (and status (not (>= 399 status 200))) :empty-chained
-    (sequential? body) (map #(get-in-with-list-support path %) body)
-    :else (get-in-with-list-support path body)))
+(defn- get-value-from-body [path body]
+  (if (sequential? body)
+    (map #(get-in-with-list-support path %) body)
+    (get-in-with-list-support path body)))
+
+(defn- get-value-from-body-or-headers [path body headers]
+  (let [value-from-body (get-value-from-body path body)
+        value-from-headers ((first path) headers)]
+    (if (and value-from-headers
+             (or (nil? value-from-body) (and (sequential? value-from-body) (empty? (flatten value-from-body)))))
+      value-from-headers
+      value-from-body)))
+
+(defn- get-value-from-path [path {status :status body :body headers :headers}]
+  (if (and status (not (>= 399 status 200)))
+    :empty-chained
+    (get-value-from-body-or-headers path body headers)))
 
 (defn- get-value-from-resource-list [path resource]
   (if (sequential? resource)
