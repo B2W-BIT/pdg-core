@@ -336,7 +336,7 @@
 (deftest request-with-overlapping-headers
   (testing "Query without query headers"
     (with-routes!
-      {(route-header "/hero" {"test" "test"})
+      {(route-header "/hero" {"test" "test", "content-type" "application/json"})
        (hero-route)}
       (let [result (execute-query uri "from hero" {} {:forward-headers {"restql-query-control" "ad-hoc", "test" "test", "accept" "*/*"}})]
         (is (= 200 (get-in result [:hero :details :status]))))))
@@ -355,6 +355,13 @@
        (route-header "/sidekick" {"test" "diff"})
        (sidekick-route)}
       (let [result (execute-query uri "from hero \nfrom sidekick\nheaders Test = \"diff\"" {} {:forward-headers {"restql-query-control" "ad-hoc", "test" "test", "accept" "*/*"}})]
+        (is (= 200 (get-in result [:hero :details :status]))))))
+
+  (testing "Replace default content-type header with query content-type header"
+    (with-routes!
+      {(route-header "/hero" {"content-type" "text/plain"})
+       (hero-route)}
+      (let [result (execute-query uri "from hero" {} {:forward-headers {"Content-Type" "text/plain"}})]
         (is (= 200 (get-in result [:hero :details :status])))))))
 
 (deftest request-and-chained-with-missing-params
