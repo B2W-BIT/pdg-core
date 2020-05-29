@@ -225,7 +225,7 @@
 (defn- build-request-map [context request request-timeout valid-query-params headers time body-encoded poll-timeout]
   {:url                (:url request)
    :request-method     (:method request)
-   :content-type       "application/json"
+   :content-type       (get headers "content-type" "application/json")
    :resource           (:from request)
    :connection-timeout (get-default :connection-timeout)
    :request-timeout    request-timeout
