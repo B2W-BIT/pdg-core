@@ -27,11 +27,16 @@
     (map #(get-in-with-list-support path %) body)
     (get-in-with-list-support path body)))
 
+(defn- nil-or-empty? [value]
+  (or (nil? value)
+      (and (string? value) (empty? value))
+      (and (sequential? value) (empty? (flatten value)))))
+
 (defn- get-value-from-body-or-headers [path body headers]
   (let [value-from-body (get-value-from-body path body)
         value-from-headers ((first path) headers)]
     (if (and value-from-headers
-             (or (nil? value-from-body) (and (sequential? value-from-body) (empty? (flatten value-from-body)))))
+             (nil-or-empty? value-from-body))
       value-from-headers
       value-from-body)))
 
