@@ -68,4 +68,12 @@
        {:path "/sidekick" :query-params {:id "A"}} (test-util/route-response {:hi "I'm sidekick"})}
       (let [result (execute-query uri "from hero\n from sidekick with id = hero.sidekickId")]
         (is (= 200 (get-in result [:hero :details :status])))
+        (is (= 200 (get-in result [:sidekick :details :status]))))))
+
+  (testing "Chained with value from header (empty body)"
+    (with-routes!
+      {"/hero" {:status 201 :content-type "application/json" :headers {:sidekickId "A"}}
+       {:path "/sidekick" :query-params {:id "A"}} (test-util/route-response {:hi "I'm sidekick"})}
+      (let [result (execute-query uri "from hero\n from sidekick with id = hero.sidekickId")]
+        (is (= 201 (get-in result [:hero :details :status])))
         (is (= 200 (get-in result [:sidekick :details :status])))))))
